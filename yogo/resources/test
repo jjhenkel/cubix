@@ -1,0 +1,227 @@
+Edge: 0 -> 2
+Node 0 has interesting degree
+Node 1 has interesting degree
+Edge: 2 -> 4
+Edge: 3 -> 6
+Edge: 4 -> 5
+Edge: 5 -> 3
+Edge: 6 -> 8
+Edge: 7 -> 1
+Edge: 8 -> 10
+Edge: 9 -> 18
+Edge: 10 -> 12
+Edge: 11 -> 9
+Edge: 12 -> 13
+Edge: 13 -> 14
+Edge: 14 -> 15
+Edge: 15 -> 16
+Edge: 16 -> 17
+Edge: 17 -> 11
+Edge: 18 -> 20
+Edge: 19 -> 7
+Edge: 20 -> 21
+Edge: 21 -> 23
+Node 21 has interesting degree
+Edge: 22 -> 82
+Node 22 has interesting degree
+Edge: 23 -> 25
+Edge: 24 -> 22
+Edge: 24 -> 33
+Node 24 has interesting degree
+Edge: 25 -> 26
+Edge: 26 -> 27
+Edge: 27 -> 29
+Edge: 28 -> 24
+Edge: 29 -> 30
+Edge: 30 -> 31
+Edge: 31 -> 32
+Edge: 32 -> 28
+Edge: 33 -> 35
+Edge: 34 -> 21
+Edge: 35 -> 37
+Edge: 36 -> 49
+Edge: 37 -> 39
+Edge: 38 -> 36
+Edge: 39 -> 40
+Edge: 40 -> 41
+Edge: 41 -> 42
+Edge: 42 -> 43
+Edge: 43 -> 45
+Edge: 44 -> 38
+Edge: 45 -> 46
+Edge: 46 -> 47
+Edge: 47 -> 48
+Edge: 48 -> 44
+Edge: 49 -> 51
+Edge: 50 -> 34
+Edge: 51 -> 74
+Edge: 52 -> 54
+Edge: 53 -> 64
+Edge: 53 -> 76
+Node 53 has interesting degree
+Edge: 54 -> 56
+Edge: 55 -> 53
+Edge: 56 -> 58
+Edge: 57 -> 62
+Edge: 58 -> 59
+Edge: 59 -> 60
+Edge: 60 -> 61
+Edge: 61 -> 57
+Edge: 62 -> 63
+Edge: 63 -> 55
+Edge: 64 -> 66
+Edge: 65 -> 75
+Edge: 66 -> 68
+Edge: 67 -> 72
+Edge: 68 -> 69
+Edge: 69 -> 70
+Edge: 70 -> 71
+Edge: 71 -> 67
+Edge: 72 -> 73
+Edge: 73 -> 65
+Edge: 74 -> 52
+Edge: 75 -> 78
+Node 75 has interesting degree
+Edge: 76 -> 77
+Edge: 77 -> 75
+Edge: 78 -> 79
+Edge: 79 -> 50
+Edge: 80 -> 81
+Node 80 has interesting degree
+Edge: 81 -> 22
+Edge: 82 -> 83
+Edge: 83 -> 19
+
+
+Label 1240(cfg: [Label 0,Label 1])
+(ConsF (AssignIsStatement (Assign (PyLhs (ConsF (IdentIsPyLValue (Ident "count") :&: Label 1024) :&: Label 1025 NilF :&: Label 1026) :&: Label 1027) :&: Label 1028 AssignOpEquals :&: Label 1029 (ExprIsRhs (Int 0 "0" UnitF :&: Label 1030) :&: Label 1031) :&: Label 1032) :&: Label 1033) :&: Label 1034 (ConsF (AssignIsStatement (Assign (PyLhs (ConsF (IdentIsPyLValue (Ident "f") :&: Label 1035) :&: Label 1036 NilF :&: Label 1037) :&: Label 1038) :&: Label 1039 AssignOpEquals :&: Label 1040 (ExprIsRhs (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1041 (ExprIsFunctionExp (Var (IdentIsIdent (Ident "open") :&: Label 1042) :&: Label 1043 UnitF :&: Label 1044) :&: Label 1045) :&: Label 1046 (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') :&: Label 1047 (ConsF (CharF 's') :&: Label 1048 (ConsF (CharF 'o') :&: Label 1049 (ConsF (CharF 'm') :&: Label 1050 (ConsF (CharF 'e') :&: Label 1051 (ConsF (CharF '-') :&: Label 1052 (ConsF (CharF 'f') :&: Label 1053 (ConsF (CharF 'i') :&: Label 1054 (ConsF (CharF 'l') :&: Label 1055 (ConsF (CharF 'e') :&: Label 1056 (ConsF (CharF '"') :&: Label 1057 NilF :&: Label 1058) :&: Label 1059) :&: Label 1060) :&: Label 1061) :&: Label 1062) :&: Label 1063) :&: Label 1064) :&: Label 1065) :&: Label 1066) :&: Label 1067) :&: Label 1068) :&: Label 1069 NilF :&: Label 1070) :&: Label 1071 UnitF :&: Label 1072) :&: Label 1073) :&: Label 1074) :&: Label 1075 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') :&: Label 1076 (ConsF (CharF 'w') :&: Label 1077 (ConsF (CharF '"') :&: Label 1078 NilF :&: Label 1079) :&: Label 1080) :&: Label 1081) :&: Label 1082 NilF :&: Label 1083) :&: Label 1084 UnitF :&: Label 1085) :&: Label 1086) :&: Label 1087) :&: Label 1088 NilF :&: Label 1089) :&: Label 1090) :&: Label 1091) :&: Label 1092) :&: Label 1093) :&: Label 1094) :&: Label 1095) :&: Label 1096) :&: Label 1097 (ConsF (For (ConsF (Var (IdentIsIdent (Ident "i") :&: Label 1098) :&: Label 1099 UnitF :&: Label 1100) :&: Label 1101 NilF :&: Label 1102) :&: Label 1103 (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1104 (ExprIsFunctionExp (Var (IdentIsIdent (Ident "range") :&: Label 1105) :&: Label 1106 UnitF :&: Label 1107) :&: Label 1108) :&: Label 1109 (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1110 (ExprIsFunctionExp (Var (IdentIsIdent (Ident "len") :&: Label 1111) :&: Label 1112 UnitF :&: Label 1113) :&: Label 1114) :&: Label 1115 (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (Var (IdentIsIdent (Ident "arr") :&: Label 1116) :&: Label 1117 UnitF :&: Label 1118) :&: Label 1119) :&: Label 1120) :&: Label 1121 NilF :&: Label 1122) :&: Label 1123) :&: Label 1124) :&: Label 1125) :&: Label 1126) :&: Label 1127) :&: Label 1128 NilF :&: Label 1129) :&: Label 1130) :&: Label 1131) :&: Label 1132) :&: Label 1133 (ConsF (StmtExpr (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1134 (FunctionIdent (Ident "write") :&: Label 1135) :&: Label 1136 (FunctionArgumentList (ConsF (ReceiverArg (ExprIsReceiver (Var (IdentIsIdent (Ident "f") :&: Label 1137) :&: Label 1138 UnitF :&: Label 1139) :&: Label 1140) :&: Label 1141) :&: Label 1142 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') :&: Label 1143 (ConsF (CharF 'E') :&: Label 1144 (ConsF (CharF 'l') :&: Label 1145 (ConsF (CharF 'e') :&: Label 1146 (ConsF (CharF 'm') :&: Label 1147 (ConsF (CharF 'e') :&: Label 1148 (ConsF (CharF 'n') :&: Label 1149 (ConsF (CharF 't') :&: Label 1150 (ConsF (CharF ':') :&: Label 1151 (ConsF (CharF ' ') :&: Label 1152 (ConsF (CharF '"') :&: Label 1153 NilF :&: Label 1154) :&: Label 1155) :&: Label 1156) :&: Label 1157) :&: Label 1158) :&: Label 1159) :&: Label 1160) :&: Label 1161) :&: Label 1162) :&: Label 1163) :&: Label 1164) :&: Label 1165 NilF :&: Label 1166) :&: Label 1167 UnitF :&: Label 1168) :&: Label 1169) :&: Label 1170) :&: Label 1171 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1172) :&: Label 1173 UnitF :&: Label 1174) :&: Label 1175 (Var (IdentIsIdent (Ident "i") :&: Label 1176) :&: Label 1177 UnitF :&: Label 1178) :&: Label 1179 UnitF :&: Label 1180) :&: Label 1181) :&: Label 1182) :&: Label 1183 NilF :&: Label 1184) :&: Label 1185) :&: Label 1186) :&: Label 1187) :&: Label 1188) :&: Label 1189) :&: Label 1190 UnitF :&: Label 1191) :&: Label 1192 (ConsF (Conditional (ConsF (PairF (Paren (PyCompIsExpr (PyBaseComp (Equality UnitF :&: Label 1193) :&: Label 1194 (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1195) :&: Label 1196 UnitF :&: Label 1197) :&: Label 1198 (Var (IdentIsIdent (Ident "i") :&: Label 1199) :&: Label 1200 UnitF :&: Label 1201) :&: Label 1202 UnitF :&: Label 1203) :&: Label 1204 (Var (IdentIsIdent (Ident "k") :&: Label 1205) :&: Label 1206 UnitF :&: Label 1207) :&: Label 1208) :&: Label 1209) :&: Label 1210 UnitF :&: Label 1211) :&: Label 1212 (ConsF (AugmentedAssign (Var (IdentIsIdent (Ident "count") :&: Label 1213) :&: Label 1214 UnitF :&: Label 1215) :&: Label 1216 (PlusAssign UnitF :&: Label 1217) :&: Label 1218 (Int 1 "1" UnitF :&: Label 1219) :&: Label 1220 UnitF :&: Label 1221) :&: Label 1222 NilF :&: Label 1223) :&: Label 1224) :&: Label 1225 NilF :&: Label 1226) :&: Label 1227 NilF :&: Label 1228 UnitF :&: Label 1229) :&: Label 1230 NilF :&: Label 1231) :&: Label 1232) :&: Label 1233 NilF :&: Label 1234 UnitF :&: Label 1235) :&: Label 1236 NilF :&: Label 1237) :&: Label 1238) :&: Label 1239) :&: Label 1240
+
+Label 1239(cfg: [Label 6,Label 7])
+(ConsF (AssignIsStatement (Assign (PyLhs (ConsF (IdentIsPyLValue (Ident "f") :&: Label 1035) :&: Label 1036 NilF :&: Label 1037) :&: Label 1038) :&: Label 1039 AssignOpEquals :&: Label 1040 (ExprIsRhs (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1041 (ExprIsFunctionExp (Var (IdentIsIdent (Ident "open") :&: Label 1042) :&: Label 1043 UnitF :&: Label 1044) :&: Label 1045) :&: Label 1046 (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') :&: Label 1047 (ConsF (CharF 's') :&: Label 1048 (ConsF (CharF 'o') :&: Label 1049 (ConsF (CharF 'm') :&: Label 1050 (ConsF (CharF 'e') :&: Label 1051 (ConsF (CharF '-') :&: Label 1052 (ConsF (CharF 'f') :&: Label 1053 (ConsF (CharF 'i') :&: Label 1054 (ConsF (CharF 'l') :&: Label 1055 (ConsF (CharF 'e') :&: Label 1056 (ConsF (CharF '"') :&: Label 1057 NilF :&: Label 1058) :&: Label 1059) :&: Label 1060) :&: Label 1061) :&: Label 1062) :&: Label 1063) :&: Label 1064) :&: Label 1065) :&: Label 1066) :&: Label 1067) :&: Label 1068) :&: Label 1069 NilF :&: Label 1070) :&: Label 1071 UnitF :&: Label 1072) :&: Label 1073) :&: Label 1074) :&: Label 1075 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') :&: Label 1076 (ConsF (CharF 'w') :&: Label 1077 (ConsF (CharF '"') :&: Label 1078 NilF :&: Label 1079) :&: Label 1080) :&: Label 1081) :&: Label 1082 NilF :&: Label 1083) :&: Label 1084 UnitF :&: Label 1085) :&: Label 1086) :&: Label 1087) :&: Label 1088 NilF :&: Label 1089) :&: Label 1090) :&: Label 1091) :&: Label 1092) :&: Label 1093) :&: Label 1094) :&: Label 1095) :&: Label 1096) :&: Label 1097 (ConsF (For (ConsF (Var (IdentIsIdent (Ident "i") :&: Label 1098) :&: Label 1099 UnitF :&: Label 1100) :&: Label 1101 NilF :&: Label 1102) :&: Label 1103 (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1104 (ExprIsFunctionExp (Var (IdentIsIdent (Ident "range") :&: Label 1105) :&: Label 1106 UnitF :&: Label 1107) :&: Label 1108) :&: Label 1109 (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1110 (ExprIsFunctionExp (Var (IdentIsIdent (Ident "len") :&: Label 1111) :&: Label 1112 UnitF :&: Label 1113) :&: Label 1114) :&: Label 1115 (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (Var (IdentIsIdent (Ident "arr") :&: Label 1116) :&: Label 1117 UnitF :&: Label 1118) :&: Label 1119) :&: Label 1120) :&: Label 1121 NilF :&: Label 1122) :&: Label 1123) :&: Label 1124) :&: Label 1125) :&: Label 1126) :&: Label 1127) :&: Label 1128 NilF :&: Label 1129) :&: Label 1130) :&: Label 1131) :&: Label 1132) :&: Label 1133 (ConsF (StmtExpr (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1134 (FunctionIdent (Ident "write") :&: Label 1135) :&: Label 1136 (FunctionArgumentList (ConsF (ReceiverArg (ExprIsReceiver (Var (IdentIsIdent (Ident "f") :&: Label 1137) :&: Label 1138 UnitF :&: Label 1139) :&: Label 1140) :&: Label 1141) :&: Label 1142 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') :&: Label 1143 (ConsF (CharF 'E') :&: Label 1144 (ConsF (CharF 'l') :&: Label 1145 (ConsF (CharF 'e') :&: Label 1146 (ConsF (CharF 'm') :&: Label 1147 (ConsF (CharF 'e') :&: Label 1148 (ConsF (CharF 'n') :&: Label 1149 (ConsF (CharF 't') :&: Label 1150 (ConsF (CharF ':') :&: Label 1151 (ConsF (CharF ' ') :&: Label 1152 (ConsF (CharF '"') :&: Label 1153 NilF :&: Label 1154) :&: Label 1155) :&: Label 1156) :&: Label 1157) :&: Label 1158) :&: Label 1159) :&: Label 1160) :&: Label 1161) :&: Label 1162) :&: Label 1163) :&: Label 1164) :&: Label 1165 NilF :&: Label 1166) :&: Label 1167 UnitF :&: Label 1168) :&: Label 1169) :&: Label 1170) :&: Label 1171 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1172) :&: Label 1173 UnitF :&: Label 1174) :&: Label 1175 (Var (IdentIsIdent (Ident "i") :&: Label 1176) :&: Label 1177 UnitF :&: Label 1178) :&: Label 1179 UnitF :&: Label 1180) :&: Label 1181) :&: Label 1182) :&: Label 1183 NilF :&: Label 1184) :&: Label 1185) :&: Label 1186) :&: Label 1187) :&: Label 1188) :&: Label 1189) :&: Label 1190 UnitF :&: Label 1191) :&: Label 1192 (ConsF (Conditional (ConsF (PairF (Paren (PyCompIsExpr (PyBaseComp (Equality UnitF :&: Label 1193) :&: Label 1194 (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1195) :&: Label 1196 UnitF :&: Label 1197) :&: Label 1198 (Var (IdentIsIdent (Ident "i") :&: Label 1199) :&: Label 1200 UnitF :&: Label 1201) :&: Label 1202 UnitF :&: Label 1203) :&: Label 1204 (Var (IdentIsIdent (Ident "k") :&: Label 1205) :&: Label 1206 UnitF :&: Label 1207) :&: Label 1208) :&: Label 1209) :&: Label 1210 UnitF :&: Label 1211) :&: Label 1212 (ConsF (AugmentedAssign (Var (IdentIsIdent (Ident "count") :&: Label 1213) :&: Label 1214 UnitF :&: Label 1215) :&: Label 1216 (PlusAssign UnitF :&: Label 1217) :&: Label 1218 (Int 1 "1" UnitF :&: Label 1219) :&: Label 1220 UnitF :&: Label 1221) :&: Label 1222 NilF :&: Label 1223) :&: Label 1224) :&: Label 1225 NilF :&: Label 1226) :&: Label 1227 NilF :&: Label 1228 UnitF :&: Label 1229) :&: Label 1230 NilF :&: Label 1231) :&: Label 1232) :&: Label 1233 NilF :&: Label 1234 UnitF :&: Label 1235) :&: Label 1236 NilF :&: Label 1237) :&: Label 1238) :&: Label 1239
+
+Label 1238(cfg: [Label 18,Label 19])
+(ConsF (For (ConsF (Var (IdentIsIdent (Ident "i") :&: Label 1098) :&: Label 1099 UnitF :&: Label 1100) :&: Label 1101 NilF :&: Label 1102) :&: Label 1103 (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1104 (ExprIsFunctionExp (Var (IdentIsIdent (Ident "range") :&: Label 1105) :&: Label 1106 UnitF :&: Label 1107) :&: Label 1108) :&: Label 1109 (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1110 (ExprIsFunctionExp (Var (IdentIsIdent (Ident "len") :&: Label 1111) :&: Label 1112 UnitF :&: Label 1113) :&: Label 1114) :&: Label 1115 (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (Var (IdentIsIdent (Ident "arr") :&: Label 1116) :&: Label 1117 UnitF :&: Label 1118) :&: Label 1119) :&: Label 1120) :&: Label 1121 NilF :&: Label 1122) :&: Label 1123) :&: Label 1124) :&: Label 1125) :&: Label 1126) :&: Label 1127) :&: Label 1128 NilF :&: Label 1129) :&: Label 1130) :&: Label 1131) :&: Label 1132) :&: Label 1133 (ConsF (StmtExpr (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1134 (FunctionIdent (Ident "write") :&: Label 1135) :&: Label 1136 (FunctionArgumentList (ConsF (ReceiverArg (ExprIsReceiver (Var (IdentIsIdent (Ident "f") :&: Label 1137) :&: Label 1138 UnitF :&: Label 1139) :&: Label 1140) :&: Label 1141) :&: Label 1142 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') :&: Label 1143 (ConsF (CharF 'E') :&: Label 1144 (ConsF (CharF 'l') :&: Label 1145 (ConsF (CharF 'e') :&: Label 1146 (ConsF (CharF 'm') :&: Label 1147 (ConsF (CharF 'e') :&: Label 1148 (ConsF (CharF 'n') :&: Label 1149 (ConsF (CharF 't') :&: Label 1150 (ConsF (CharF ':') :&: Label 1151 (ConsF (CharF ' ') :&: Label 1152 (ConsF (CharF '"') :&: Label 1153 NilF :&: Label 1154) :&: Label 1155) :&: Label 1156) :&: Label 1157) :&: Label 1158) :&: Label 1159) :&: Label 1160) :&: Label 1161) :&: Label 1162) :&: Label 1163) :&: Label 1164) :&: Label 1165 NilF :&: Label 1166) :&: Label 1167 UnitF :&: Label 1168) :&: Label 1169) :&: Label 1170) :&: Label 1171 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1172) :&: Label 1173 UnitF :&: Label 1174) :&: Label 1175 (Var (IdentIsIdent (Ident "i") :&: Label 1176) :&: Label 1177 UnitF :&: Label 1178) :&: Label 1179 UnitF :&: Label 1180) :&: Label 1181) :&: Label 1182) :&: Label 1183 NilF :&: Label 1184) :&: Label 1185) :&: Label 1186) :&: Label 1187) :&: Label 1188) :&: Label 1189) :&: Label 1190 UnitF :&: Label 1191) :&: Label 1192 (ConsF (Conditional (ConsF (PairF (Paren (PyCompIsExpr (PyBaseComp (Equality UnitF :&: Label 1193) :&: Label 1194 (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1195) :&: Label 1196 UnitF :&: Label 1197) :&: Label 1198 (Var (IdentIsIdent (Ident "i") :&: Label 1199) :&: Label 1200 UnitF :&: Label 1201) :&: Label 1202 UnitF :&: Label 1203) :&: Label 1204 (Var (IdentIsIdent (Ident "k") :&: Label 1205) :&: Label 1206 UnitF :&: Label 1207) :&: Label 1208) :&: Label 1209) :&: Label 1210 UnitF :&: Label 1211) :&: Label 1212 (ConsF (AugmentedAssign (Var (IdentIsIdent (Ident "count") :&: Label 1213) :&: Label 1214 UnitF :&: Label 1215) :&: Label 1216 (PlusAssign UnitF :&: Label 1217) :&: Label 1218 (Int 1 "1" UnitF :&: Label 1219) :&: Label 1220 UnitF :&: Label 1221) :&: Label 1222 NilF :&: Label 1223) :&: Label 1224) :&: Label 1225 NilF :&: Label 1226) :&: Label 1227 NilF :&: Label 1228 UnitF :&: Label 1229) :&: Label 1230 NilF :&: Label 1231) :&: Label 1232) :&: Label 1233 NilF :&: Label 1234 UnitF :&: Label 1235) :&: Label 1236 NilF :&: Label 1237) :&: Label 1238
+
+Label 1237(cfg: [Label 82,Label 83])
+NilF :&: Label 1237
+
+Label 1236(cfg: [Label 20,Label 21,Label 22])
+(For (ConsF (Var (IdentIsIdent (Ident "i") :&: Label 1098) :&: Label 1099 UnitF :&: Label 1100) :&: Label 1101 NilF :&: Label 1102) :&: Label 1103 (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1104 (ExprIsFunctionExp (Var (IdentIsIdent (Ident "range") :&: Label 1105) :&: Label 1106 UnitF :&: Label 1107) :&: Label 1108) :&: Label 1109 (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1110 (ExprIsFunctionExp (Var (IdentIsIdent (Ident "len") :&: Label 1111) :&: Label 1112 UnitF :&: Label 1113) :&: Label 1114) :&: Label 1115 (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (Var (IdentIsIdent (Ident "arr") :&: Label 1116) :&: Label 1117 UnitF :&: Label 1118) :&: Label 1119) :&: Label 1120) :&: Label 1121 NilF :&: Label 1122) :&: Label 1123) :&: Label 1124) :&: Label 1125) :&: Label 1126) :&: Label 1127) :&: Label 1128 NilF :&: Label 1129) :&: Label 1130) :&: Label 1131) :&: Label 1132) :&: Label 1133 (ConsF (StmtExpr (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1134 (FunctionIdent (Ident "write") :&: Label 1135) :&: Label 1136 (FunctionArgumentList (ConsF (ReceiverArg (ExprIsReceiver (Var (IdentIsIdent (Ident "f") :&: Label 1137) :&: Label 1138 UnitF :&: Label 1139) :&: Label 1140) :&: Label 1141) :&: Label 1142 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') :&: Label 1143 (ConsF (CharF 'E') :&: Label 1144 (ConsF (CharF 'l') :&: Label 1145 (ConsF (CharF 'e') :&: Label 1146 (ConsF (CharF 'm') :&: Label 1147 (ConsF (CharF 'e') :&: Label 1148 (ConsF (CharF 'n') :&: Label 1149 (ConsF (CharF 't') :&: Label 1150 (ConsF (CharF ':') :&: Label 1151 (ConsF (CharF ' ') :&: Label 1152 (ConsF (CharF '"') :&: Label 1153 NilF :&: Label 1154) :&: Label 1155) :&: Label 1156) :&: Label 1157) :&: Label 1158) :&: Label 1159) :&: Label 1160) :&: Label 1161) :&: Label 1162) :&: Label 1163) :&: Label 1164) :&: Label 1165 NilF :&: Label 1166) :&: Label 1167 UnitF :&: Label 1168) :&: Label 1169) :&: Label 1170) :&: Label 1171 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1172) :&: Label 1173 UnitF :&: Label 1174) :&: Label 1175 (Var (IdentIsIdent (Ident "i") :&: Label 1176) :&: Label 1177 UnitF :&: Label 1178) :&: Label 1179 UnitF :&: Label 1180) :&: Label 1181) :&: Label 1182) :&: Label 1183 NilF :&: Label 1184) :&: Label 1185) :&: Label 1186) :&: Label 1187) :&: Label 1188) :&: Label 1189) :&: Label 1190 UnitF :&: Label 1191) :&: Label 1192 (ConsF (Conditional (ConsF (PairF (Paren (PyCompIsExpr (PyBaseComp (Equality UnitF :&: Label 1193) :&: Label 1194 (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1195) :&: Label 1196 UnitF :&: Label 1197) :&: Label 1198 (Var (IdentIsIdent (Ident "i") :&: Label 1199) :&: Label 1200 UnitF :&: Label 1201) :&: Label 1202 UnitF :&: Label 1203) :&: Label 1204 (Var (IdentIsIdent (Ident "k") :&: Label 1205) :&: Label 1206 UnitF :&: Label 1207) :&: Label 1208) :&: Label 1209) :&: Label 1210 UnitF :&: Label 1211) :&: Label 1212 (ConsF (AugmentedAssign (Var (IdentIsIdent (Ident "count") :&: Label 1213) :&: Label 1214 UnitF :&: Label 1215) :&: Label 1216 (PlusAssign UnitF :&: Label 1217) :&: Label 1218 (Int 1 "1" UnitF :&: Label 1219) :&: Label 1220 UnitF :&: Label 1221) :&: Label 1222 NilF :&: Label 1223) :&: Label 1224) :&: Label 1225 NilF :&: Label 1226) :&: Label 1227 NilF :&: Label 1228 UnitF :&: Label 1229) :&: Label 1230 NilF :&: Label 1231) :&: Label 1232) :&: Label 1233 NilF :&: Label 1234 UnitF :&: Label 1235) :&: Label 1236
+
+Label 1234(cfg: [Label 80,Label 81])
+NilF :&: Label 1234
+
+Label 1233(cfg: [Label 33,Label 34])
+(ConsF (StmtExpr (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1134 (FunctionIdent (Ident "write") :&: Label 1135) :&: Label 1136 (FunctionArgumentList (ConsF (ReceiverArg (ExprIsReceiver (Var (IdentIsIdent (Ident "f") :&: Label 1137) :&: Label 1138 UnitF :&: Label 1139) :&: Label 1140) :&: Label 1141) :&: Label 1142 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') :&: Label 1143 (ConsF (CharF 'E') :&: Label 1144 (ConsF (CharF 'l') :&: Label 1145 (ConsF (CharF 'e') :&: Label 1146 (ConsF (CharF 'm') :&: Label 1147 (ConsF (CharF 'e') :&: Label 1148 (ConsF (CharF 'n') :&: Label 1149 (ConsF (CharF 't') :&: Label 1150 (ConsF (CharF ':') :&: Label 1151 (ConsF (CharF ' ') :&: Label 1152 (ConsF (CharF '"') :&: Label 1153 NilF :&: Label 1154) :&: Label 1155) :&: Label 1156) :&: Label 1157) :&: Label 1158) :&: Label 1159) :&: Label 1160) :&: Label 1161) :&: Label 1162) :&: Label 1163) :&: Label 1164) :&: Label 1165 NilF :&: Label 1166) :&: Label 1167 UnitF :&: Label 1168) :&: Label 1169) :&: Label 1170) :&: Label 1171 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1172) :&: Label 1173 UnitF :&: Label 1174) :&: Label 1175 (Var (IdentIsIdent (Ident "i") :&: Label 1176) :&: Label 1177 UnitF :&: Label 1178) :&: Label 1179 UnitF :&: Label 1180) :&: Label 1181) :&: Label 1182) :&: Label 1183 NilF :&: Label 1184) :&: Label 1185) :&: Label 1186) :&: Label 1187) :&: Label 1188) :&: Label 1189) :&: Label 1190 UnitF :&: Label 1191) :&: Label 1192 (ConsF (Conditional (ConsF (PairF (Paren (PyCompIsExpr (PyBaseComp (Equality UnitF :&: Label 1193) :&: Label 1194 (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1195) :&: Label 1196 UnitF :&: Label 1197) :&: Label 1198 (Var (IdentIsIdent (Ident "i") :&: Label 1199) :&: Label 1200 UnitF :&: Label 1201) :&: Label 1202 UnitF :&: Label 1203) :&: Label 1204 (Var (IdentIsIdent (Ident "k") :&: Label 1205) :&: Label 1206 UnitF :&: Label 1207) :&: Label 1208) :&: Label 1209) :&: Label 1210 UnitF :&: Label 1211) :&: Label 1212 (ConsF (AugmentedAssign (Var (IdentIsIdent (Ident "count") :&: Label 1213) :&: Label 1214 UnitF :&: Label 1215) :&: Label 1216 (PlusAssign UnitF :&: Label 1217) :&: Label 1218 (Int 1 "1" UnitF :&: Label 1219) :&: Label 1220 UnitF :&: Label 1221) :&: Label 1222 NilF :&: Label 1223) :&: Label 1224) :&: Label 1225 NilF :&: Label 1226) :&: Label 1227 NilF :&: Label 1228 UnitF :&: Label 1229) :&: Label 1230 NilF :&: Label 1231) :&: Label 1232) :&: Label 1233
+
+Label 1232(cfg: [Label 49,Label 50])
+(ConsF (Conditional (ConsF (PairF (Paren (PyCompIsExpr (PyBaseComp (Equality UnitF :&: Label 1193) :&: Label 1194 (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1195) :&: Label 1196 UnitF :&: Label 1197) :&: Label 1198 (Var (IdentIsIdent (Ident "i") :&: Label 1199) :&: Label 1200 UnitF :&: Label 1201) :&: Label 1202 UnitF :&: Label 1203) :&: Label 1204 (Var (IdentIsIdent (Ident "k") :&: Label 1205) :&: Label 1206 UnitF :&: Label 1207) :&: Label 1208) :&: Label 1209) :&: Label 1210 UnitF :&: Label 1211) :&: Label 1212 (ConsF (AugmentedAssign (Var (IdentIsIdent (Ident "count") :&: Label 1213) :&: Label 1214 UnitF :&: Label 1215) :&: Label 1216 (PlusAssign UnitF :&: Label 1217) :&: Label 1218 (Int 1 "1" UnitF :&: Label 1219) :&: Label 1220 UnitF :&: Label 1221) :&: Label 1222 NilF :&: Label 1223) :&: Label 1224) :&: Label 1225 NilF :&: Label 1226) :&: Label 1227 NilF :&: Label 1228 UnitF :&: Label 1229) :&: Label 1230 NilF :&: Label 1231) :&: Label 1232
+
+Label 1231(cfg: [Label 78,Label 79])
+NilF :&: Label 1231
+
+Label 1230(cfg: [Label 51,Label 74,Label 75])
+(Conditional (ConsF (PairF (Paren (PyCompIsExpr (PyBaseComp (Equality UnitF :&: Label 1193) :&: Label 1194 (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1195) :&: Label 1196 UnitF :&: Label 1197) :&: Label 1198 (Var (IdentIsIdent (Ident "i") :&: Label 1199) :&: Label 1200 UnitF :&: Label 1201) :&: Label 1202 UnitF :&: Label 1203) :&: Label 1204 (Var (IdentIsIdent (Ident "k") :&: Label 1205) :&: Label 1206 UnitF :&: Label 1207) :&: Label 1208) :&: Label 1209) :&: Label 1210 UnitF :&: Label 1211) :&: Label 1212 (ConsF (AugmentedAssign (Var (IdentIsIdent (Ident "count") :&: Label 1213) :&: Label 1214 UnitF :&: Label 1215) :&: Label 1216 (PlusAssign UnitF :&: Label 1217) :&: Label 1218 (Int 1 "1" UnitF :&: Label 1219) :&: Label 1220 UnitF :&: Label 1221) :&: Label 1222 NilF :&: Label 1223) :&: Label 1224) :&: Label 1225 NilF :&: Label 1226) :&: Label 1227 NilF :&: Label 1228 UnitF :&: Label 1229) :&: Label 1230
+
+Label 1228(cfg: [Label 76,Label 77])
+NilF :&: Label 1228
+
+Label 1224(cfg: [Label 64,Label 65])
+(ConsF (AugmentedAssign (Var (IdentIsIdent (Ident "count") :&: Label 1213) :&: Label 1214 UnitF :&: Label 1215) :&: Label 1216 (PlusAssign UnitF :&: Label 1217) :&: Label 1218 (Int 1 "1" UnitF :&: Label 1219) :&: Label 1220 UnitF :&: Label 1221) :&: Label 1222 NilF :&: Label 1223) :&: Label 1224
+
+Label 1223(cfg: [Label 72,Label 73])
+NilF :&: Label 1223
+
+Label 1222(cfg: [Label 66,Label 67])
+(AugmentedAssign (Var (IdentIsIdent (Ident "count") :&: Label 1213) :&: Label 1214 UnitF :&: Label 1215) :&: Label 1216 (PlusAssign UnitF :&: Label 1217) :&: Label 1218 (Int 1 "1" UnitF :&: Label 1219) :&: Label 1220 UnitF :&: Label 1221) :&: Label 1222
+
+Label 1220(cfg: [Label 70,Label 71])
+(Int 1 "1" UnitF :&: Label 1219) :&: Label 1220
+
+Label 1216(cfg: [Label 68,Label 69])
+(Var (IdentIsIdent (Ident "count") :&: Label 1213) :&: Label 1214 UnitF :&: Label 1215) :&: Label 1216
+
+Label 1212(cfg: [Label 52,Label 53])
+(Paren (PyCompIsExpr (PyBaseComp (Equality UnitF :&: Label 1193) :&: Label 1194 (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1195) :&: Label 1196 UnitF :&: Label 1197) :&: Label 1198 (Var (IdentIsIdent (Ident "i") :&: Label 1199) :&: Label 1200 UnitF :&: Label 1201) :&: Label 1202 UnitF :&: Label 1203) :&: Label 1204 (Var (IdentIsIdent (Ident "k") :&: Label 1205) :&: Label 1206 UnitF :&: Label 1207) :&: Label 1208) :&: Label 1209) :&: Label 1210 UnitF :&: Label 1211) :&: Label 1212
+
+Label 1210(cfg: [Label 54,Label 55])
+(PyCompIsExpr (PyBaseComp (Equality UnitF :&: Label 1193) :&: Label 1194 (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1195) :&: Label 1196 UnitF :&: Label 1197) :&: Label 1198 (Var (IdentIsIdent (Ident "i") :&: Label 1199) :&: Label 1200 UnitF :&: Label 1201) :&: Label 1202 UnitF :&: Label 1203) :&: Label 1204 (Var (IdentIsIdent (Ident "k") :&: Label 1205) :&: Label 1206 UnitF :&: Label 1207) :&: Label 1208) :&: Label 1209) :&: Label 1210
+
+Label 1208(cfg: [Label 62,Label 63])
+(Var (IdentIsIdent (Ident "k") :&: Label 1205) :&: Label 1206 UnitF :&: Label 1207) :&: Label 1208
+
+Label 1204(cfg: [Label 56,Label 57])
+(Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1195) :&: Label 1196 UnitF :&: Label 1197) :&: Label 1198 (Var (IdentIsIdent (Ident "i") :&: Label 1199) :&: Label 1200 UnitF :&: Label 1201) :&: Label 1202 UnitF :&: Label 1203) :&: Label 1204
+
+Label 1202(cfg: [Label 60,Label 61])
+(Var (IdentIsIdent (Ident "i") :&: Label 1199) :&: Label 1200 UnitF :&: Label 1201) :&: Label 1202
+
+Label 1198(cfg: [Label 58,Label 59])
+(Var (IdentIsIdent (Ident "arr") :&: Label 1195) :&: Label 1196 UnitF :&: Label 1197) :&: Label 1198
+
+Label 1192(cfg: [Label 35,Label 36])
+(StmtExpr (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1134 (FunctionIdent (Ident "write") :&: Label 1135) :&: Label 1136 (FunctionArgumentList (ConsF (ReceiverArg (ExprIsReceiver (Var (IdentIsIdent (Ident "f") :&: Label 1137) :&: Label 1138 UnitF :&: Label 1139) :&: Label 1140) :&: Label 1141) :&: Label 1142 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') :&: Label 1143 (ConsF (CharF 'E') :&: Label 1144 (ConsF (CharF 'l') :&: Label 1145 (ConsF (CharF 'e') :&: Label 1146 (ConsF (CharF 'm') :&: Label 1147 (ConsF (CharF 'e') :&: Label 1148 (ConsF (CharF 'n') :&: Label 1149 (ConsF (CharF 't') :&: Label 1150 (ConsF (CharF ':') :&: Label 1151 (ConsF (CharF ' ') :&: Label 1152 (ConsF (CharF '"') :&: Label 1153 NilF :&: Label 1154) :&: Label 1155) :&: Label 1156) :&: Label 1157) :&: Label 1158) :&: Label 1159) :&: Label 1160) :&: Label 1161) :&: Label 1162) :&: Label 1163) :&: Label 1164) :&: Label 1165 NilF :&: Label 1166) :&: Label 1167 UnitF :&: Label 1168) :&: Label 1169) :&: Label 1170) :&: Label 1171 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1172) :&: Label 1173 UnitF :&: Label 1174) :&: Label 1175 (Var (IdentIsIdent (Ident "i") :&: Label 1176) :&: Label 1177 UnitF :&: Label 1178) :&: Label 1179 UnitF :&: Label 1180) :&: Label 1181) :&: Label 1182) :&: Label 1183 NilF :&: Label 1184) :&: Label 1185) :&: Label 1186) :&: Label 1187) :&: Label 1188) :&: Label 1189) :&: Label 1190 UnitF :&: Label 1191) :&: Label 1192
+
+Label 1190(cfg: [Label 37,Label 38])
+(FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1134 (FunctionIdent (Ident "write") :&: Label 1135) :&: Label 1136 (FunctionArgumentList (ConsF (ReceiverArg (ExprIsReceiver (Var (IdentIsIdent (Ident "f") :&: Label 1137) :&: Label 1138 UnitF :&: Label 1139) :&: Label 1140) :&: Label 1141) :&: Label 1142 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') :&: Label 1143 (ConsF (CharF 'E') :&: Label 1144 (ConsF (CharF 'l') :&: Label 1145 (ConsF (CharF 'e') :&: Label 1146 (ConsF (CharF 'm') :&: Label 1147 (ConsF (CharF 'e') :&: Label 1148 (ConsF (CharF 'n') :&: Label 1149 (ConsF (CharF 't') :&: Label 1150 (ConsF (CharF ':') :&: Label 1151 (ConsF (CharF ' ') :&: Label 1152 (ConsF (CharF '"') :&: Label 1153 NilF :&: Label 1154) :&: Label 1155) :&: Label 1156) :&: Label 1157) :&: Label 1158) :&: Label 1159) :&: Label 1160) :&: Label 1161) :&: Label 1162) :&: Label 1163) :&: Label 1164) :&: Label 1165 NilF :&: Label 1166) :&: Label 1167 UnitF :&: Label 1168) :&: Label 1169) :&: Label 1170) :&: Label 1171 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1172) :&: Label 1173 UnitF :&: Label 1174) :&: Label 1175 (Var (IdentIsIdent (Ident "i") :&: Label 1176) :&: Label 1177 UnitF :&: Label 1178) :&: Label 1179 UnitF :&: Label 1180) :&: Label 1181) :&: Label 1182) :&: Label 1183 NilF :&: Label 1184) :&: Label 1185) :&: Label 1186) :&: Label 1187) :&: Label 1188) :&: Label 1189) :&: Label 1190
+
+Label 1181(cfg: [Label 43,Label 44])
+(Subscript (Var (IdentIsIdent (Ident "arr") :&: Label 1172) :&: Label 1173 UnitF :&: Label 1174) :&: Label 1175 (Var (IdentIsIdent (Ident "i") :&: Label 1176) :&: Label 1177 UnitF :&: Label 1178) :&: Label 1179 UnitF :&: Label 1180) :&: Label 1181
+
+Label 1179(cfg: [Label 47,Label 48])
+(Var (IdentIsIdent (Ident "i") :&: Label 1176) :&: Label 1177 UnitF :&: Label 1178) :&: Label 1179
+
+Label 1175(cfg: [Label 45,Label 46])
+(Var (IdentIsIdent (Ident "arr") :&: Label 1172) :&: Label 1173 UnitF :&: Label 1174) :&: Label 1175
+
+Label 1169(cfg: [Label 41,Label 42])
+(Strings (ConsF (ConsF (CharF '"') :&: Label 1143 (ConsF (CharF 'E') :&: Label 1144 (ConsF (CharF 'l') :&: Label 1145 (ConsF (CharF 'e') :&: Label 1146 (ConsF (CharF 'm') :&: Label 1147 (ConsF (CharF 'e') :&: Label 1148 (ConsF (CharF 'n') :&: Label 1149 (ConsF (CharF 't') :&: Label 1150 (ConsF (CharF ':') :&: Label 1151 (ConsF (CharF ' ') :&: Label 1152 (ConsF (CharF '"') :&: Label 1153 NilF :&: Label 1154) :&: Label 1155) :&: Label 1156) :&: Label 1157) :&: Label 1158) :&: Label 1159) :&: Label 1160) :&: Label 1161) :&: Label 1162) :&: Label 1163) :&: Label 1164) :&: Label 1165 NilF :&: Label 1166) :&: Label 1167 UnitF :&: Label 1168) :&: Label 1169
+
+Label 1140(cfg: [Label 39,Label 40])
+(Var (IdentIsIdent (Ident "f") :&: Label 1137) :&: Label 1138 UnitF :&: Label 1139) :&: Label 1140
+
+Label 1133(cfg: [Label 23,Label 24])
+(FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1104 (ExprIsFunctionExp (Var (IdentIsIdent (Ident "range") :&: Label 1105) :&: Label 1106 UnitF :&: Label 1107) :&: Label 1108) :&: Label 1109 (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1110 (ExprIsFunctionExp (Var (IdentIsIdent (Ident "len") :&: Label 1111) :&: Label 1112 UnitF :&: Label 1113) :&: Label 1114) :&: Label 1115 (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (Var (IdentIsIdent (Ident "arr") :&: Label 1116) :&: Label 1117 UnitF :&: Label 1118) :&: Label 1119) :&: Label 1120) :&: Label 1121 NilF :&: Label 1122) :&: Label 1123) :&: Label 1124) :&: Label 1125) :&: Label 1126) :&: Label 1127) :&: Label 1128 NilF :&: Label 1129) :&: Label 1130) :&: Label 1131) :&: Label 1132) :&: Label 1133
+
+Label 1126(cfg: [Label 27,Label 28])
+(FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1110 (ExprIsFunctionExp (Var (IdentIsIdent (Ident "len") :&: Label 1111) :&: Label 1112 UnitF :&: Label 1113) :&: Label 1114) :&: Label 1115 (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (Var (IdentIsIdent (Ident "arr") :&: Label 1116) :&: Label 1117 UnitF :&: Label 1118) :&: Label 1119) :&: Label 1120) :&: Label 1121 NilF :&: Label 1122) :&: Label 1123) :&: Label 1124) :&: Label 1125) :&: Label 1126
+
+Label 1119(cfg: [Label 31,Label 32])
+(Var (IdentIsIdent (Ident "arr") :&: Label 1116) :&: Label 1117 UnitF :&: Label 1118) :&: Label 1119
+
+Label 1114(cfg: [Label 29,Label 30])
+(Var (IdentIsIdent (Ident "len") :&: Label 1111) :&: Label 1112 UnitF :&: Label 1113) :&: Label 1114
+
+Label 1108(cfg: [Label 25,Label 26])
+(Var (IdentIsIdent (Ident "range") :&: Label 1105) :&: Label 1106 UnitF :&: Label 1107) :&: Label 1108
+
+Label 1097(cfg: [Label 8,Label 9])
+(AssignIsStatement (Assign (PyLhs (ConsF (IdentIsPyLValue (Ident "f") :&: Label 1035) :&: Label 1036 NilF :&: Label 1037) :&: Label 1038) :&: Label 1039 AssignOpEquals :&: Label 1040 (ExprIsRhs (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1041 (ExprIsFunctionExp (Var (IdentIsIdent (Ident "open") :&: Label 1042) :&: Label 1043 UnitF :&: Label 1044) :&: Label 1045) :&: Label 1046 (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') :&: Label 1047 (ConsF (CharF 's') :&: Label 1048 (ConsF (CharF 'o') :&: Label 1049 (ConsF (CharF 'm') :&: Label 1050 (ConsF (CharF 'e') :&: Label 1051 (ConsF (CharF '-') :&: Label 1052 (ConsF (CharF 'f') :&: Label 1053 (ConsF (CharF 'i') :&: Label 1054 (ConsF (CharF 'l') :&: Label 1055 (ConsF (CharF 'e') :&: Label 1056 (ConsF (CharF '"') :&: Label 1057 NilF :&: Label 1058) :&: Label 1059) :&: Label 1060) :&: Label 1061) :&: Label 1062) :&: Label 1063) :&: Label 1064) :&: Label 1065) :&: Label 1066) :&: Label 1067) :&: Label 1068) :&: Label 1069 NilF :&: Label 1070) :&: Label 1071 UnitF :&: Label 1072) :&: Label 1073) :&: Label 1074) :&: Label 1075 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') :&: Label 1076 (ConsF (CharF 'w') :&: Label 1077 (ConsF (CharF '"') :&: Label 1078 NilF :&: Label 1079) :&: Label 1080) :&: Label 1081) :&: Label 1082 NilF :&: Label 1083) :&: Label 1084 UnitF :&: Label 1085) :&: Label 1086) :&: Label 1087) :&: Label 1088 NilF :&: Label 1089) :&: Label 1090) :&: Label 1091) :&: Label 1092) :&: Label 1093) :&: Label 1094) :&: Label 1095) :&: Label 1096) :&: Label 1097
+
+Label 1094(cfg: [Label 10,Label 11])
+(FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs :&: Label 1041 (ExprIsFunctionExp (Var (IdentIsIdent (Ident "open") :&: Label 1042) :&: Label 1043 UnitF :&: Label 1044) :&: Label 1045) :&: Label 1046 (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') :&: Label 1047 (ConsF (CharF 's') :&: Label 1048 (ConsF (CharF 'o') :&: Label 1049 (ConsF (CharF 'm') :&: Label 1050 (ConsF (CharF 'e') :&: Label 1051 (ConsF (CharF '-') :&: Label 1052 (ConsF (CharF 'f') :&: Label 1053 (ConsF (CharF 'i') :&: Label 1054 (ConsF (CharF 'l') :&: Label 1055 (ConsF (CharF 'e') :&: Label 1056 (ConsF (CharF '"') :&: Label 1057 NilF :&: Label 1058) :&: Label 1059) :&: Label 1060) :&: Label 1061) :&: Label 1062) :&: Label 1063) :&: Label 1064) :&: Label 1065) :&: Label 1066) :&: Label 1067) :&: Label 1068) :&: Label 1069 NilF :&: Label 1070) :&: Label 1071 UnitF :&: Label 1072) :&: Label 1073) :&: Label 1074) :&: Label 1075 (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') :&: Label 1076 (ConsF (CharF 'w') :&: Label 1077 (ConsF (CharF '"') :&: Label 1078 NilF :&: Label 1079) :&: Label 1080) :&: Label 1081) :&: Label 1082 NilF :&: Label 1083) :&: Label 1084 UnitF :&: Label 1085) :&: Label 1086) :&: Label 1087) :&: Label 1088 NilF :&: Label 1089) :&: Label 1090) :&: Label 1091) :&: Label 1092) :&: Label 1093) :&: Label 1094
+
+Label 1086(cfg: [Label 16,Label 17])
+(Strings (ConsF (ConsF (CharF '"') :&: Label 1076 (ConsF (CharF 'w') :&: Label 1077 (ConsF (CharF '"') :&: Label 1078 NilF :&: Label 1079) :&: Label 1080) :&: Label 1081) :&: Label 1082 NilF :&: Label 1083) :&: Label 1084 UnitF :&: Label 1085) :&: Label 1086
+
+Label 1073(cfg: [Label 14,Label 15])
+(Strings (ConsF (ConsF (CharF '"') :&: Label 1047 (ConsF (CharF 's') :&: Label 1048 (ConsF (CharF 'o') :&: Label 1049 (ConsF (CharF 'm') :&: Label 1050 (ConsF (CharF 'e') :&: Label 1051 (ConsF (CharF '-') :&: Label 1052 (ConsF (CharF 'f') :&: Label 1053 (ConsF (CharF 'i') :&: Label 1054 (ConsF (CharF 'l') :&: Label 1055 (ConsF (CharF 'e') :&: Label 1056 (ConsF (CharF '"') :&: Label 1057 NilF :&: Label 1058) :&: Label 1059) :&: Label 1060) :&: Label 1061) :&: Label 1062) :&: Label 1063) :&: Label 1064) :&: Label 1065) :&: Label 1066) :&: Label 1067) :&: Label 1068) :&: Label 1069 NilF :&: Label 1070) :&: Label 1071 UnitF :&: Label 1072) :&: Label 1073
+
+Label 1045(cfg: [Label 12,Label 13])
+(Var (IdentIsIdent (Ident "open") :&: Label 1042) :&: Label 1043 UnitF :&: Label 1044) :&: Label 1045
+
+Label 1034(cfg: [Label 2,Label 3])
+(AssignIsStatement (Assign (PyLhs (ConsF (IdentIsPyLValue (Ident "count") :&: Label 1024) :&: Label 1025 NilF :&: Label 1026) :&: Label 1027) :&: Label 1028 AssignOpEquals :&: Label 1029 (ExprIsRhs (Int 0 "0" UnitF :&: Label 1030) :&: Label 1031) :&: Label 1032) :&: Label 1033) :&: Label 1034
+
+Label 1031(cfg: [Label 4,Label 5])
+(Int 0 "0" UnitF :&: Label 1030) :&: Label 1031
+
+Basic blocks: 
+[Label 0,Label 23,Label 33,Label 64,Label 76,Label 78,Label 80,Label 82]
+(Module (ConsF (AssignIsStatement (Assign (PyLhs (ConsF (IdentIsPyLValue (Ident "count")) NilF)) AssignOpEquals (ExprIsRhs (Int 0 "0" UnitF)))) (ConsF (AssignIsStatement (Assign (PyLhs (ConsF (IdentIsPyLValue (Ident "f")) NilF)) AssignOpEquals (ExprIsRhs (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs (ExprIsFunctionExp (Var (IdentIsIdent (Ident "open")) UnitF)) (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') (ConsF (CharF 's') (ConsF (CharF 'o') (ConsF (CharF 'm') (ConsF (CharF 'e') (ConsF (CharF '-') (ConsF (CharF 'f') (ConsF (CharF 'i') (ConsF (CharF 'l') (ConsF (CharF 'e') (ConsF (CharF '"') NilF))))))))))) NilF) UnitF))) (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') (ConsF (CharF 'w') (ConsF (CharF '"') NilF))) NilF) UnitF))) NilF)))))))) (ConsF (For (ConsF (Var (IdentIsIdent (Ident "i")) UnitF) NilF) (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs (ExprIsFunctionExp (Var (IdentIsIdent (Ident "range")) UnitF)) (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs (ExprIsFunctionExp (Var (IdentIsIdent (Ident "len")) UnitF)) (FunctionArgumentList (ConsF (PositionalArgument (ExprIsPositionalArgExp (Var (IdentIsIdent (Ident "arr")) UnitF))) NilF)))))) NilF)))) (ConsF (StmtExpr (FunctionCallIsExpr (FunctionCall EmptyFunctionCallAttrs (FunctionIdent (Ident "write")) (FunctionArgumentList (ConsF (ReceiverArg (ExprIsReceiver (Var (IdentIsIdent (Ident "f")) UnitF))) (ConsF (PositionalArgument (ExprIsPositionalArgExp (Strings (ConsF (ConsF (CharF '"') (ConsF (CharF 'E') (ConsF (CharF 'l') (ConsF (CharF 'e') (ConsF (CharF 'm') (ConsF (CharF 'e') (ConsF (CharF 'n') (ConsF (CharF 't') (ConsF (CharF ':') (ConsF (CharF ' ') (ConsF (CharF '"') NilF))))))))))) NilF) UnitF))) (ConsF (PositionalArgument (ExprIsPositionalArgExp (Subscript (Var (IdentIsIdent (Ident "arr")) UnitF) (Var (IdentIsIdent (Ident "i")) UnitF) UnitF))) NilF)))))) UnitF) (ConsF (Conditional (ConsF (PairF (Paren (PyCompIsExpr (PyBaseComp (Equality UnitF) (Subscript (Var (IdentIsIdent (Ident "arr")) UnitF) (Var (IdentIsIdent (Ident "i")) UnitF) UnitF) (Var (IdentIsIdent (Ident "k")) UnitF))) UnitF) (ConsF (AugmentedAssign (Var (IdentIsIdent (Ident "count")) UnitF) (PlusAssign UnitF) (Int 1 "1" UnitF) UnitF) NilF)) NilF) NilF UnitF) NilF)) NilF UnitF) NilF))))
+count = 0
+f = open("some-file", "w")
+for i in range(len(arr)):
+    f.write("Element: ", arr[i])
+    if (arr[i] == k):
+        count += 1

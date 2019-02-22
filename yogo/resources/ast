@@ -1,0 +1,119 @@
+(Module
+ (ConsF
+  (AssignIsStatement
+   (Assign .. " := "
+    (PyLhs (ConsF (IdentIsPyLValue (Ident "count")) NilF)) .. "count -> :="
+    AssignOpEquals
+    (ExprIsRhs 
+     (Int 0 "0" UnitF)))) .. "0 -> :="
+  (ConsF
+   (AssignIsStatement
+    (Assign .. " := "
+     (PyLhs (ConsF (IdentIsPyLValue (Ident "f")) NilF)) .. " f -> := "
+     AssignOpEquals
+     (ExprIsRhs 
+      (FunctionCallIsExpr
+       (FunctionCall .. " CALL"
+        EmptyFunctionCallAttrs
+        (ExprIsFunctionExp (Var (IdentIsIdent (Ident "open") .. "open") .. "Q" UnitF))
+        (FunctionArgumentList .. "ARG"
+         (ConsF
+          (PositionalArgument (ExprIsPositionalArgExp (String <filename>) .. "<filename" ))
+          (ConsF
+           (PositionalArgument
+            (ExprIsPositionalArgExp
+             (Strings <w> UnitF) .. "w"))
+           NilF))))))))
+   (ConsF
+    (For .. ITER
+     (ConsF (Var (IdentIsIdent (Ident "i") .. "i") UnitF) .. Q(i, thetaS1) NilF) 
+     (FunctionCallIsExpr
+      (FunctionCall .. CALL
+       EmptyFunctionCallAttrs
+       (ExprIsFunctionExp (Var (IdentIsIdent (Ident "range") .. "range") .. Q(range) UnitF))
+       (FunctionArgumentList
+        (ConsF
+         (PositionalArgument
+          (ExprIsPositionalArgExp
+           (FunctionCallIsExpr
+            (FunctionCall
+             EmptyFunctionCallAttrs
+             (ExprIsFunctionExp (Var (IdentIsIdent (Ident "len")) UnitF))
+             (FunctionArgumentList
+              (ConsF
+               (PositionalArgument
+                (ExprIsPositionalArgExp
+                 (Var (IdentIsIdent (Ident "arr")) UnitF)))
+               NilF))))))
+         NilF))))
+     (ConsF
+      (StmtExpr
+       (FunctionCallIsExpr
+        (FunctionCall
+         EmptyFunctionCallAttrs
+         (FunctionIdent (Ident "write"))
+         (FunctionArgumentList
+          (ConsF
+           (ReceiverArg
+            (ExprIsReceiver (Var (IdentIsIdent (Ident "f")) UnitF)))
+           (ConsF
+            (PositionalArgument
+             (ExprIsPositionalArgExp
+              (Strings
+               <Some string to print>
+               UnitF)))
+            (ConsF
+             (PositionalArgument
+              (ExprIsPositionalArgExp
+               (Subscript
+                (Var (IdentIsIdent (Ident "arr")) UnitF)
+                (Var (IdentIsIdent (Ident "i")) UnitF)
+                UnitF)))
+             NilF))))))
+       UnitF)
+      (ConsF
+       (Conditional
+        (ConsF
+         (PairF
+          (Paren
+           (PyCompIsExpr
+            (PyBaseComp
+             (Equality UnitF)
+             (Subscript
+              (Var (IdentIsIdent (Ident "arr")) UnitF)
+              (Var (IdentIsIdent (Ident "i")) UnitF)
+              UnitF)
+             (Var (IdentIsIdent (Ident "k")) UnitF)))
+           UnitF)
+          (ConsF
+           (AugmentedAssign
+            (Var (IdentIsIdent (Ident "count")) UnitF)
+            (PlusAssign UnitF)
+            (Int 1 "1" UnitF)
+            UnitF)
+           NilF))
+         NilF)
+        NilF
+        UnitF)
+       NilF))
+     NilF
+     UnitF)
+    (ConsF
+     (AssignIsStatement
+      (Assign
+       (PyLhs (ConsF (IdentIsPyLValue (Ident "count")) NilF))
+       AssignOpEquals
+       (ExprIsRhs
+        (FunctionCallIsExpr
+         (FunctionCall
+          EmptyFunctionCallAttrs
+          (FunctionIdent (Ident "count"))
+          (FunctionArgumentList
+           (ConsF
+            (ReceiverArg
+             (ExprIsReceiver (Var (IdentIsIdent (Ident "arr")) UnitF)))
+            (ConsF
+             (PositionalArgument
+              (ExprIsPositionalArgExp (Var (IdentIsIdent (Ident "k")) UnitF)))
+             NilF))))))))
+     NilF)))))
