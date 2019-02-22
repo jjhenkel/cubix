@@ -7,13 +7,11 @@ import Data.Comp.Multi.Strategy.Classification ( dynProj )
 import Data.Maybe ( fromJust )
 import System.Environment ( getArgs )
 
-import qualified Language.Dot.Pretty as Dot
-import qualified Language.Dot.Syntax as Dot
-
-import Cubix.ParsePretty
 import Cubix.Language.Info
+import Cubix.ParsePretty
 import Cubix.Language.Python.Parametric.Common as PCommon
-import Cubix.Search.Search
+
+import Generic
 
 data LangProj = PythonProj (Project MPythonSig)
 data YLangProj = YPythonProj (YProject YPythonSig)
@@ -29,7 +27,7 @@ lowercase :: String -> String
 lowercase = map toLower
 
 runYogo :: LangProj -> YLangProj
-runYogo (PythonProj p) = YPythonProj . toGraphPython p
+runYogo (PythonProj p) = YPythonProj (toGraphPython p)
 
 main = do
   gen <- mkCSLabelGen
@@ -39,9 +37,10 @@ main = do
   let ruleFiles = (args !! 2)
   let sourceFiles = (drop 3 args)
   projRes <- parseProj gen language sourceFiles
-  yogoProj <- case projRes of
-                Nothing   -> error "Parse failed"
-                Just proj -> runYogo proj
+  let yogoProj = case projRes of
+                   Nothing   -> error "Parse failed"
+                   Just proj -> runYogo proj
+  putStrLn "Done"
 
 usage :: String
 usage = "Usage:\n"
