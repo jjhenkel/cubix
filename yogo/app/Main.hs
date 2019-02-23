@@ -42,7 +42,7 @@ main = do
                    Nothing   -> error "Parse failed"
                    Just proj -> runYogo proj
   case yogoProj of
-    YPythonProj proj -> putStrLn $ show $ Map.keys proj
+    YPythonProj proj -> putStrLn $ show $ Map.mapAccum (\a b -> (a ++ (show (Map.keys b)), 0)) "" proj
 
 usage :: String
 usage = "Usage:\n"
