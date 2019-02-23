@@ -5,6 +5,7 @@ import Data.Char  ( toLower )
 import Data.Comp.Multi ( stripA )
 import Data.Comp.Multi.Strategy.Classification ( dynProj )
 import Data.Maybe ( fromJust )
+import qualified Data.Map as Map
 import System.Environment ( getArgs )
 
 import Cubix.Language.Info
@@ -40,7 +41,8 @@ main = do
   let yogoProj = case projRes of
                    Nothing   -> error "Parse failed"
                    Just proj -> runYogo proj
-  putStrLn "Done"
+  case yogoProj of
+    YPythonProj proj -> putStrLn $ show $ Map.keys proj
 
 usage :: String
 usage = "Usage:\n"

@@ -21,6 +21,7 @@ dependencies:
 - containers
 - cubix
 - cubix-compdata
+- mtl
 
 library:
   source-dirs: src

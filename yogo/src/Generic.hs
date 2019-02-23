@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Generic (
@@ -10,9 +11,11 @@ module Generic (
   toGraphPython,
   ) where
 
+import Control.Monad.Identity ( Identity(..), runIdentity )
 import Data.Comp.Multi ( AnnTerm )
 import Data.Comp.Multi.Ops ( (:+:) )
-import Data.Comp.Multi.HFunctor ( E(..) )
+import Data.Comp.Multi.HFunctor ( E(..), (:=>) )
+import Data.Comp.Multi.Strategic
 import Data.Map ( Map )
 import qualified Data.Map as Map
 
@@ -26,16 +29,27 @@ newtype Occurrence = Occurrence [Label]
 type TermOcc f = AnnTerm Occurrence f
 
 type YGenericSig = BoolF :+: IntF :+: IntegerF :+: CharF
-type YPythonSig = YGenericSig
-type YPythonGraph l = TermOcc YPythonSig l
 
 -- A map from original source file path to a map of function graphs keyed by function name
 newtype Name = Name String
+  deriving (Eq, Show, Ord)
+
 type YFile f = Map Name (E (TermOcc f))
 type YProject f = Map FilePath (YFile f)
 
-fileToGraphPython :: MPythonTermLab ModuleL -> YFile YPythonSig
-fileToGraphPython = error "what"
+type YogoMonad f = Identity f
+type MonadYogo m = (Monad m)
+
+type YPythonSig = YGenericSig
+type YPythonGraph l = TermOcc YPythonSig l
+type YPythonFile = YFile YPythonSig
+
+
+fileToGraphPython' :: (MonadYogo m) => TranslateM m MPythonTermLab ModuleL YPythonFile
+fileToGraphPython' = error "what"
+
+fileToGraphPython :: MPythonTermLab :=> YPythonFile
+fileToGraphPython = runIdentity . (crushtdT $ promoteTF $ addFail fileToGraphPython')
 
 toGraphPython :: Project MPythonSig -> YProject YPythonSig
-toGraphPython = const Map.empty
+toGraphPython = Map.map (\(E t) -> fileToGraphPython t)
