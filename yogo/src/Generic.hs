@@ -109,7 +109,7 @@ getNextID = lastID %= (+ 1) >> liftM ID (use lastID)
 
 type YTranslatePyM m f t = GTranslateM m ((f :&: Label) MPythonTermLab) (ID YPythonSig t)
 
-ytransUnknown :: (MonadYogo YPythonSig m, UnknownF :<: YPythonSig) => YTranslateM m f MPythonSig YPythonSig MemoryT
+ytransUnknown :: (MonadYogo y m, UnknownF :<: y) => YTranslateM m f s y MemoryT
 ytransUnknown (f :&: label) = do
   mems <- use memScope
   let mem = yinject $ UnknownF (head mems)
@@ -118,22 +118,22 @@ ytransUnknown (f :&: label) = do
   memScope .= id : (tail mems)
   return id
 
-class YTrans f t where
-  ytrans :: (MonadYogo YPythonSig m) => YTranslatePyM m f t
+class YTrans f s y t where
+  ytrans :: (MonadYogo y m) => YTranslateM m f s y t
 
-instance {-# OVERLAPPABLE #-} YTrans f t where
+instance {-# OVERLAPPABLE #-} YTrans f s y t where
   ytrans = const mzero
 
-instance {-# OVERLAPPABLE #-} (UnknownF :<: YPythonSig) => YTrans f MemoryT where
+instance {-# OVERLAPPABLE #-} (UnknownF :<: y) => YTrans f s y MemoryT where
   ytrans = ytransUnknown
 
-instance {-# OVERLAPPING #-} (YTrans f MemoryT, YTrans g MemoryT) => YTrans (f :+: g) MemoryT where
+instance {-# OVERLAPPING #-} (YTrans f s y MemoryT, YTrans g s y MemoryT) => YTrans (f :+: g) s y MemoryT where
   ytrans = caseH' ytrans ytrans
 
-instance (YTrans f t, YTrans g t) => YTrans (f :+: g) t where
+instance (YTrans f s y t, YTrans g s y t) => YTrans (f :+: g) s y t where
   ytrans = caseH' ytrans ytrans
 
-instance YTrans Py.Module ScopeT where
+instance YTrans Py.Module MPythonSig YPythonSig ScopeT where
   ytrans ((Py.Module body) :&: label) = do
     id <- getNextID
     nameScope %= ((:) $ Name "Module")
