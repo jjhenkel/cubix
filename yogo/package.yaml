@@ -21,7 +21,9 @@ dependencies:
 - containers
 - cubix
 - cubix-compdata
+- lens
 - mtl
+- transformers
 
 library:
   source-dirs: src

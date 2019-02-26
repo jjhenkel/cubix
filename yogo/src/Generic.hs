@@ -1,54 +1,143 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Generic (
-  TermOcc,
   YGenericSig,
   YPythonSig,
-  YPythonGraph,
   YFile,
   YProject,
   toGraphPython,
   ) where
 
+import Control.Lens ( makeLenses, over, use, (^.), (.=), (%=) )
+import Control.Monad ( MonadPlus, mzero, liftM )
+import Control.Monad.Trans.Maybe ( runMaybeT )
 import Control.Monad.Identity ( Identity(..), runIdentity )
-import Data.Comp.Multi ( AnnTerm, inject', (:&:)(..) )
-import Data.Comp.Multi.Ops ( (:+:) )
-import Data.Comp.Multi.HFunctor ( E(..), (:=>) )
+import Control.Monad.State ( MonadState, execStateT, evalStateT, runStateT, modify, get )
+import Data.Comp.Multi ( AnnTerm, inject', (:&:)(..), HFunctor, unTerm, inj, project', caseH', hmapM, hfmap, Term(..) )
+import Data.Comp.Multi.Ops ( (:+:), (:<:) )
+import Data.Comp.Multi.HFunctor ( E(..), K(..), (:=>) )
 import Data.Comp.Multi.Strategic
 import Data.Map ( Map )
 import qualified Data.Map as Map
-
+import Data.Maybe ( fromJust )
 import Cubix.Language.Info
-import Cubix.Language.Parametric.Syntax
-import Cubix.Language.Python.Parametric.Common ( MPythonSig, MPythonTermLab, ModuleL )
+import qualified Cubix.Language.Parametric.Syntax as Cubix
+import Cubix.Language.Python.Parametric.Common ( MPythonSig, MPythonTermLab )
+import qualified Cubix.Language.Python.Parametric.Common as Py
 
-newtype Occurrence = Occurrence [Label]
-  deriving (Eq, Show)
+-- Types in Yogo
+data PrimitiveT
+data AddressT
+data ValueT
+data MemoryT
+data MemValT
+data ScopeT -- functions, modules
 
-type TermOcc f = AnnTerm Occurrence f
+data Primitive = IntF Int | BoolF Bool | StringF [Char]
 
-type YGenericSig = BoolF :+: IntF :+: IntegerF :+: CharF
+data ConstF (e :: * -> *) t where
+  ConstF :: Primitive -> ConstF e ValueT
 
--- A map from original source file path to a map of function graphs keyed by function name
-newtype Name = Name [Char]
-  deriving (Eq, Show, Ord)
+data UnknownF (e :: * -> *) t where
+  UnknownF :: e MemoryT -> UnknownF e MemoryT
 
-type YFile f = Map Name (E (TermOcc f))
+data MemF (e :: * -> *) t where
+  MemF :: e MemValT -> MemF e MemoryT
+
+data MemGenesisF (e :: * -> *) t where
+  MemGenesisF :: MemGenesisF e MemoryT
+
+newtype Name = Name [Char] deriving (Eq, Show, Ord)
+newtype Occurrence = Occurrence [Label] deriving (Eq, Show)
+
+data ID (f :: (* -> *) -> * -> *) t where
+  ID :: Int -> ID f t
+  Scope :: ID f ScopeT
+
+data Node (f :: (* -> *) -> * -> *) t = Node (f (ID f) t)
+
+type YGenericSig = UnknownF :+: ConstF :+: MemF :+: MemGenesisF
+
+data YGraphEntry f = YGraphNode (E (ID f)) (E (Node f)) Occurrence
+                   -- | YGraphEq (E ID) (E ID)
+                   -- | YGraphMemSuccessor (ID MemoryT) (ID MemoryT)
+
+type YGraph f = [YGraphEntry f]
+type YFile f = Map Name (YGraph f)
 type YProject f = Map FilePath (YFile f)
 
-type MonadYogo m = (Monad m)
+data YogoState f = YogoState { _nameScope :: [Name]
+                             , _memScope :: [ID f MemoryT]
+                             , _file  :: YFile f
+                             , _lastID :: Int
+                             }
+makeLenses ''YogoState
 
+type MonadYogo f m = (MonadPlus m, MonadState (YogoState f) m)
 type YPythonSig = YGenericSig
-type YPythonGraph l = TermOcc YPythonSig l
-type YPythonFile = YFile YPythonSig
+type CanYTrans f = (UnknownF :<: f)
 
-fileToGraphPython' :: (MonadYogo m) => TranslateM m MPythonTermLab ModuleL YPythonFile
-fileToGraphPython' = const $ return $ Map.singleton (Name "fn1") (E $ inject' $ (IntF 1) :&: Occurrence [])
+type YTranslateM m f sig ysig t = GTranslateM m ((f :&: Label) (TermLab sig)) (ID ysig t)
 
--- Note: runIdentity is how haskell knows that monad type. 'head' works too, will just make it a list
-fileToGraphPython :: MPythonTermLab :=> YPythonFile
-fileToGraphPython = runIdentity . (crushtdT $ promoteTF $ addFail fileToGraphPython')
+yinject :: (g :<: f) => g (ID f) t -> Node f t
+yinject = Node . inj
+
+getScope :: (MonadYogo f m) => m Name
+getScope = liftM head $ use nameScope
+
+addEntry :: (MonadYogo f m) => YGraphEntry f -> m ()
+addEntry e = getScope >>= \name -> file %= Map.adjust ((:) e) name
+
+getNextID :: (MonadYogo f m) => m (ID f t)
+getNextID = lastID %= (+ 1) >> liftM ID (use lastID)
+
+ytransUnknown :: (MonadYogo ysig m, CanYTrans ysig) => YTranslateM m f sig ysig MemoryT
+ytransUnknown (f :&: label) = do
+  mems <- use memScope
+  let mem = yinject $ UnknownF (head mems)
+  id <- getNextID
+  addEntry $ YGraphNode (E id) (E mem) (Occurrence [label])
+  memScope .= id : (tail mems)
+  return id
+
+class (HFunctor f, f :<: sig) => YTrans f sig ysig t where
+  ytrans :: (MonadYogo ysig m) => YTranslateM m f sig ysig t
+
+instance {-# OVERLAPPABLE #-} (HFunctor f, f :<: sig) => YTrans f sig ysig t where
+  ytrans = const mzero
+
+instance (YTrans f sig ysig t, YTrans g sig ysig t) => YTrans (f :+: g) sig ysig t where
+  ytrans = caseH' ytrans ytrans
+
+instance YTrans Py.Module MPythonSig YPythonSig ScopeT where
+  ytrans ((Py.Module body) :&: label) = do
+    id <- getNextID
+    nameScope %= ((:) $ Name "Module")
+    memScope  %= ((:) id)
+    ytrans $ unTerm body
+    return Scope
+
+-- ytranspythonmodule :: (MonadYogo YPythonSig m) => TranslateM m MPythonTermLab Py.ModuleL (ID YPythonSig ScopeT)
+-- ytransPythonModule t = ytrans $ unTerm t
+
+-- initState :: YogoState YPythonSig
+-- initState = YogoState [] [] Map.empty 0
+
+-- fileToGraphPython :: MPythonTermLab l -> YFile YPythonSig
+-- fileToGraphPython t =
+--   let (a, state) = fromJust $ runIdentity $ runMaybeT $ runStateT ((onetdT $ promoteTF ytransPythonModule) t) initState in
+--     state ^. file
 
 toGraphPython :: Project MPythonSig -> YProject YPythonSig
-toGraphPython = Map.map (\(E t) -> fileToGraphPython t)
+-- toGraphPython = Map.map (\(E t) -> fileToGraphPython t)
+toGraphPython = error "no"

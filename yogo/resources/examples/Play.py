@@ -1,2 +1,2 @@
-for a, b in arr:
-    f()
+1
+2
