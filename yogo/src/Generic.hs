@@ -109,7 +109,7 @@ getNextID = lastID %= (+ 1) >> liftM ID (use lastID)
 
 type YTranslatePyM m f t = GTranslateM m ((f :&: Label) MPythonTermLab) (ID YPythonSig t)
 
-ytransUnknown :: (MonadYogo y m, UnknownF :<: y) => YTranslateM m f s y MemoryT
+ytransUnknown :: (MonadYogo y m, UnknownF :<: y) => YTranslateM m f g y MemoryT
 ytransUnknown (f :&: label) = do
   mems <- use memScope
   let mem = yinject $ UnknownF (head mems)
@@ -118,19 +118,20 @@ ytransUnknown (f :&: label) = do
   memScope .= id : (tail mems)
   return id
 
-class YTrans f s y t where
-  ytrans :: (MonadYogo y m) => YTranslateM m f s y t
+-- s is needed, otherwise cause Incoherent Instances when f is a signature type
+class YTrans f g y t where
+  ytrans :: (MonadYogo y m) => YTranslateM m f g y t
 
-instance {-# OVERLAPPABLE #-} YTrans f s y t where
+instance {-# OVERLAPPABLE #-} YTrans f g y t where
   ytrans = const mzero
 
-instance {-# OVERLAPPABLE #-} (UnknownF :<: y) => YTrans f s y MemoryT where
+instance {-# OVERLAPPABLE #-} (UnknownF :<: y) => YTrans f g y MemoryT where
   ytrans = ytransUnknown
 
-instance {-# OVERLAPPING #-} (YTrans f s y MemoryT, YTrans g s y MemoryT) => YTrans (f :+: g) s y MemoryT where
+instance {-# OVERLAPPING #-} (YTrans f1 g y MemoryT, YTrans f2 g y MemoryT) => YTrans (f1 :+: f2) g y MemoryT where
   ytrans = caseH' ytrans ytrans
 
-instance (YTrans f s y t, YTrans g s y t) => YTrans (f :+: g) s y t where
+instance (YTrans f1 g y t, YTrans f2 g y t) => YTrans (f1 :+: f2) g y t where
   ytrans = caseH' ytrans ytrans
 
 instance YTrans Py.Module MPythonSig YPythonSig ScopeT where
