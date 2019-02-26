@@ -109,7 +109,7 @@ getNextID = lastID %= (+ 1) >> liftM ID (use lastID)
 
 type YTranslatePyM m f t = GTranslateM m ((f :&: Label) MPythonTermLab) (ID YPythonSig t)
 
-ytransUnknown :: (MonadYogo YPythonSig m, f :<: MPythonSig, UnknownF :<: YPythonSig) => YTranslateM m f MPythonSig YPythonSig MemoryT
+ytransUnknown :: (MonadYogo YPythonSig m, UnknownF :<: YPythonSig) => YTranslateM m f MPythonSig YPythonSig MemoryT
 ytransUnknown (f :&: label) = do
   mems <- use memScope
   let mem = yinject $ UnknownF (head mems)
@@ -118,13 +118,13 @@ ytransUnknown (f :&: label) = do
   memScope .= id : (tail mems)
   return id
 
-class (f :<: MPythonSig) => YTrans f t where
+class YTrans f t where
   ytrans :: (MonadYogo YPythonSig m) => YTranslatePyM m f t
 
-instance {-# OVERLAPPABLE #-} (f :<: MPythonSig) => YTrans f t where
+instance {-# OVERLAPPABLE #-} YTrans f t where
   ytrans = const mzero
 
-instance {-# OVERLAPPABLE #-} (f :<: MPythonSig, UnknownF :<: YPythonSig) => YTrans f MemoryT where
+instance {-# OVERLAPPABLE #-} (UnknownF :<: YPythonSig) => YTrans f MemoryT where
   ytrans = ytransUnknown
 
 instance {-# OVERLAPPING #-} (YTrans f MemoryT, YTrans g MemoryT) => YTrans (f :+: g) MemoryT where
