@@ -8,33 +8,71 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Generic (
-  YGenericSig,
-  YPythonSig,
-  YFile,
-  YProject,
-  toGraphPython,
+  PrimitiveT
+  , AddressT
+  , ValueT
+  , MemoryT
+  , MemValT
+  , StatementT
+  , ScopeT
+
+  , Primitive(..)
+  , ConstF(..)
+  , UnknownF(..)
+  , MemF(..)
+  , MemGenesisF(..)
+
+  , Name(..)
+  , Occurrence(..)
+  , ID(..)
+  , Node(..)
+
+  , YGenericSig
+  , YGraphEntry(..)
+  , YGraph
+  , YProject
+
+  , YogoState(..)
+  , nameScope
+  , memScope
+  , file
+
+  , MonadYogo
+  , CanYTrans
+  , YTranslateM
+  , YTrans(..)
+  , YFile
+
+  , yinject
+  , getScope
+  , addEntry
+  , getNextID
+  , makeNode
+  , ytranslate
+
+
   ) where
+
+import Data.Proxy ( Proxy(..) )
+import Debug.Trace
+import Data.Typeable
 
 import Control.Lens ( makeLenses, over, use, (^.), (.=), (%=) )
 import Control.Monad ( MonadPlus, mzero, liftM )
 import Control.Monad.Trans.Maybe ( runMaybeT )
 import Control.Monad.Identity ( Identity(..), runIdentity )
 import Control.Monad.State ( MonadState, execStateT, evalStateT, runStateT, modify, get )
-import Data.Comp.Multi ( AnnTerm, inject', (:&:)(..), HFunctor, unTerm, inj, project', caseH', hmapM, hfmap, Term(..) )
-import Data.Comp.Multi.Ops ( (:+:), (:<:) )
-import Data.Comp.Multi.HFunctor ( E(..), K(..), (:=>) )
+import Data.Comp.Multi
 import Data.Comp.Multi.Strategic
 import Data.Map ( Map )
 import qualified Data.Map as Map
 import Data.Maybe ( fromJust )
+
 import Cubix.Language.Info
-import qualified Cubix.Language.Parametric.Syntax as Cubix
-import Cubix.Language.Python.Parametric.Common ( MPythonSig, MPythonTermLab )
-import qualified Cubix.Language.Python.Parametric.Common as Py
+import qualified Cubix.Language.Parametric.Syntax as C
 
 -- Types in Yogo
 data PrimitiveT
@@ -44,9 +82,10 @@ data MemoryT
 data MemValT
 
 -- Syntax types, can't be used as node arguments
+data StatementT
 data ScopeT -- functions, modules
 
-data Primitive = IntF Int | BoolF Bool | StringF [Char]
+data Primitive = IntegerF Integer | IntF Int | BoolF Bool | StringF [Char]
 
 data ConstF (e :: * -> *) t where
   ConstF :: Primitive -> ConstF e ValueT
@@ -65,6 +104,8 @@ newtype Occurrence = Occurrence [Label] deriving (Eq, Show)
 
 data ID (f :: (* -> *) -> * -> *) t where
   ID :: Int -> ID f t
+  Statement :: ID f StatementT
+  Statements :: ID f [StatementT]
   Scope :: ID f ScopeT
 
 data Node (f :: (* -> *) -> * -> *) t = Node (f (ID f) t)
@@ -72,8 +113,8 @@ data Node (f :: (* -> *) -> * -> *) t = Node (f (ID f) t)
 type YGenericSig = UnknownF :+: ConstF :+: MemF :+: MemGenesisF
 
 data YGraphEntry f = YGraphNode (E (ID f)) (E (Node f)) Occurrence
-                   -- | YGraphEq (E ID) (E ID)
-                   -- | YGraphMemSuccessor (ID MemoryT) (ID MemoryT)
+                   | YGraphEq (E (ID f)) (E (ID f))
+                   | YGraphMemSuccessor (ID f MemoryT) (ID f MemoryT)
 
 type YGraph f = [YGraphEntry f]
 type YFile f = Map Name (YGraph f)
@@ -88,12 +129,20 @@ makeLenses ''YogoState
 
 type MonadYogo f m = (MonadPlus m, MonadState (YogoState f) m)
 
-data PyLhsF e l where
-  PyLhsF :: e [AddressT] -> PyLhsF e [AddressT]
-
-type YPythonSig = PyLhsF :+: YGenericSig
+type CanYTrans f = (HFunctor f, ShowHF f, Typeable f)
 
 type YTranslateM m f sig ysig t = GTranslateM m ((f :&: Label) (TermLab sig)) (ID ysig t)
+
+instance Show (ID f t) where
+  show (ID n) = "(ID " ++ show n ++ ")"
+  show Statement = "Statement"
+  show Statements = "[Statement]"
+  show Scope = "Scope"
+
+instance Show (YGraphEntry f) where
+  show (YGraphNode (E id) _ _) = show id
+  show (YGraphEq (E id1) (E id2)) = "Eq " ++ show id1 ++  " " ++ show id2
+  show (YGraphMemSuccessor id1 id2) = "MemSuc " ++ show id1 ++ " " ++ show id2
 
 yinject :: (g :<: f) => g (ID f) t -> Node f t
 yinject = Node . inj
@@ -102,57 +151,54 @@ getScope :: (MonadYogo f m) => m Name
 getScope = liftM head $ use nameScope
 
 addEntry :: (MonadYogo f m) => YGraphEntry f -> m ()
-addEntry e = getScope >>= \name -> file %= Map.adjust ((:) e) name
+addEntry e = do
+  name <- getScope
+  m <- use file
+  traceM $ "Before Add " ++ (show (Map.lookup name m))
+  file %= Map.adjust (e :) name
+  m <- use file
+  traceM $ "After Add " ++ (show (Map.lookup name m))
 
 getNextID :: (MonadYogo f m) => m (ID f t)
 getNextID = lastID %= (+ 1) >> liftM ID (use lastID)
 
-type YTranslatePyM m f t = GTranslateM m ((f :&: Label) MPythonTermLab) (ID YPythonSig t)
+makeNode :: (MonadYogo f m, g :<: f) => g (ID f) t -> [Label] -> m (ID f t)
+makeNode node labels = do
+  id <- getNextID
+  addEntry $ YGraphNode (E id) (E $ yinject node) (Occurrence labels)
+  return id
 
-ytransUnknown :: (MonadYogo y m, UnknownF :<: y) => YTranslateM m f g y MemoryT
+ytransUnknown :: (CanYTrans f, MonadYogo y m, UnknownF :<: y) => YTranslateM m f g y MemoryT
 ytransUnknown (f :&: label) = do
   mems <- use memScope
-  let mem = yinject $ UnknownF (head mems)
-  id <- getNextID
-  addEntry $ YGraphNode (E id) (E mem) (Occurrence [label])
+  id <- makeNode (UnknownF (head mems)) [label]
   memScope .= id : (tail mems)
   return id
 
 -- s is needed, otherwise cause Incoherent Instances when f is a signature type
-class YTrans f g y t where
+class (CanYTrans f) => YTrans f g y t where
   ytrans :: (MonadYogo y m) => YTranslateM m f g y t
 
-instance {-# OVERLAPPABLE #-} YTrans f g y t where
-  ytrans = const mzero
+ytranslate :: (CanYTrans f, MonadYogo y m, YTrans f f y t) => GTranslateM m (TermLab f) (ID y t)
+ytranslate f = (ytrans . unTerm) f
 
-instance {-# OVERLAPPABLE #-} (UnknownF :<: y) => YTrans f g y MemoryT where
-  ytrans = ytransUnknown
+instance {-# OVERLAPPABLE #-} (CanYTrans f) => YTrans f g y t where
+  ytrans = const mzero
+  -- ytrans = error $ show (typeRep (Proxy :: Proxy f))
+
+instance {-# OVERLAPPING #-} (YTrans f1 g y t, YTrans f2 g y t) => YTrans (f1 :+: f2) g y t where
+  ytrans = caseH' ytrans ytrans
+
+instance {-# OVERLAPPABLE #-} (CanYTrans f) => YTrans f g y MemoryT where
+  ytrans = const mzero
+  -- ytrans = error $ show (typeRep (Proxy :: Proxy f)) ++ "yo"
 
 instance {-# OVERLAPPING #-} (YTrans f1 g y MemoryT, YTrans f2 g y MemoryT) => YTrans (f1 :+: f2) g y MemoryT where
   ytrans = caseH' ytrans ytrans
 
-instance (YTrans f1 g y t, YTrans f2 g y t) => YTrans (f1 :+: f2) g y t where
-  ytrans = caseH' ytrans ytrans
-
-instance YTrans Py.Module MPythonSig YPythonSig ScopeT where
-  ytrans ((Py.Module body) :&: label) = do
-    id <- getNextID
-    nameScope %= ((:) $ Name "Module")
-    memScope  %= ((:) id)
-    (_ :: ID YPythonSig MemoryT) <- ytrans $ unTerm body
-    return Scope
-
-ytransPythonModule :: (MonadYogo YPythonSig m) => TranslateM m MPythonTermLab Py.ModuleL (ID YPythonSig ScopeT)
-ytransPythonModule t = ytrans $ unTerm t
-
-initState :: YogoState YPythonSig
-initState = YogoState [] [] Map.empty 0
-
-fileToGraphPython :: MPythonTermLab l -> YFile YPythonSig
-fileToGraphPython t =
-  let (a, state) = fromJust $ runIdentity $ runMaybeT $ runStateT ((onetdT $ promoteTF ytransPythonModule) t) initState in
-    state ^. file
-
-toGraphPython :: Project MPythonSig -> YProject YPythonSig
-toGraphPython = Map.map (\(E t) -> fileToGraphPython t)
--- toGraphPython = error "no"
+instance (YTrans g g y StatementT, YTrans g g y [StatementT]) => YTrans C.ListF g y [StatementT] where
+  ytrans (C.NilF :&: _) = return Statements
+  ytrans ((C.ConsF x xs) :&: _) = do
+    _ :: ID y StatementT <- ytranslate x
+    _ :: ID y [StatementT] <- ytranslate xs
+    return Statements

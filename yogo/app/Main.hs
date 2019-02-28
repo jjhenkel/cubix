@@ -1,3 +1,4 @@
+{-# Language FlexibleInstances #-}
 module Main where
 
 import Control.Monad ( liftM, (<=<) )
@@ -13,9 +14,10 @@ import Cubix.ParsePretty
 import Cubix.Language.Python.Parametric.Common as PCommon
 
 import Generic
+import Python as Py
 
 data LangProj = PythonProj (Project MPythonSig)
-data YLangProj = YPythonProj (YProject YPythonSig)
+data YLangProj = YPythonProj (YProject Py.YPythonSig)
 
 parseProj :: LabelGen -> String -> [FilePath] -> IO (Maybe LangProj)
 parseProj gen "python"     = (return . maybe Nothing (Just . PythonProj)) <=< parseProject gen parseFile
@@ -28,7 +30,7 @@ lowercase :: String -> String
 lowercase = map toLower
 
 runYogo :: LangProj -> YLangProj
-runYogo (PythonProj p) = YPythonProj (toGraphPython p)
+runYogo (PythonProj p) = YPythonProj (Py.toGraphPython p)
 
 main = do
   gen <- mkCSLabelGen
