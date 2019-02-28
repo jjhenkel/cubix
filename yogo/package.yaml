@@ -28,8 +28,8 @@ dependencies:
 library:
   source-dirs: src
   exposed-modules:
-    - Generic
-    - Python
+    - Common.Trans
+    - Python.Trans
 
 executables:
   yogo-exe:

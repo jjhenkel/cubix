@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Python (
+module Python.Trans (
   YPythonSig
   , toGraphPython
   ) where
@@ -33,7 +33,7 @@ import Cubix.Language.Info
 import qualified Cubix.Language.Parametric.Syntax as C
 import qualified Cubix.Language.Python.Parametric.Common as Py
 
-import Generic
+import Common.Trans
 
 data PyLhs e l where
   PyLhs :: e [AddressT] -> PyLhs e [AddressT]
@@ -54,7 +54,6 @@ instance YTrans Py.Statement Py.MPythonSig YPythonSig StatementT where
     traceM "StmtExpr"
     _ :: PyID ValueT <- ytranslate expr
     return Statement
-
   ytrans f = error "Not Implemented"
 
 instance YTrans Py.Module Py.MPythonSig YPythonSig ScopeT where

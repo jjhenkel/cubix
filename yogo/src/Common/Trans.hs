@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Generic (
+module Common.Trans (
   PrimitiveT
   , AddressT
   , ValueT
@@ -53,7 +53,7 @@ module Generic (
   , makeNode
   , ytranslate
 
-
+  , m
   ) where
 
 import Data.Proxy ( Proxy(..) )
@@ -85,7 +85,7 @@ data MemValT
 data StatementT
 data ScopeT -- functions, modules
 
-data Primitive = IntegerF Integer | IntF Int | BoolF Bool | StringF [Char]
+data Primitive = IntegerF Integer | IntF Int | BoolF Bool | StringF String
 
 data ConstF (e :: * -> *) t where
   ConstF :: Primitive -> ConstF e ValueT
@@ -202,3 +202,46 @@ instance (YTrans g g y StatementT, YTrans g g y [StatementT]) => YTrans C.ListF 
     _ :: ID y StatementT <- ytranslate x
     _ :: ID y [StatementT] <- ytranslate xs
     return Statements
+
+type Namespace = String
+type NodeType  = String
+type ArgName   = String
+
+class (Typeable f) => SigToLangDSL (f :: (* -> *) -> * -> *) where
+  namespace :: Proxy f -> Namespace
+  namespace = undefined
+
+  nodeType :: Proxy f -> NodeType
+  nodeType = undefined
+
+  argNames :: Proxy f -> [ArgName]
+  argNames = undefined
+
+  derives :: Proxy f -> [(Namespace, NodeType)]
+  derives = const []
+
+  lang :: Proxy f -> Map Namespace [(NodeType, [ArgName], [(Namespace, NodeType)])]
+  lang f = Map.singleton (namespace f) [(nodeType f, argNames f, derives f)]
+
+instance {-# OVERLAPPING #-} (SigToLangDSL f1, SigToLangDSL f2) => SigToLangDSL (f1 :+: f2) where
+  lang = const $ Map.unionWith (++) (lang (Proxy :: Proxy f1)) (lang (Proxy :: Proxy f2))
+
+instance SigToLangDSL MemGenesisF where
+  namespace = const "generic"
+  nodeType = const "mem-genesis"
+  argNames = const []
+  derives = const []
+
+instance SigToLangDSL ConstF where
+  namespace = const "generic"
+  nodeType = const "const"
+  argNames = const ["$const"]
+  derives = const []
+
+m = lang $ (Proxy :: Proxy (ConstF :+: MemGenesisF))
+
+primitiveToDSL :: Primitive -> String
+primitiveToDSL (IntegerF n) = show n
+primitiveToDSL (IntF n) = show n
+primitiveToDSL (BoolF b) = if b then "true" else "false"
+primitiveToDSL (StringF s) = s

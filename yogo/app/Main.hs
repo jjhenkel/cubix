@@ -13,8 +13,8 @@ import Cubix.Language.Info
 import Cubix.ParsePretty
 import Cubix.Language.Python.Parametric.Common as PCommon
 
-import Generic
-import Python as Py
+import Common.Trans
+import Python.Trans as Py
 
 data LangProj = PythonProj (Project MPythonSig)
 data YLangProj = YPythonProj (YProject Py.YPythonSig)
@@ -33,6 +33,7 @@ runYogo :: LangProj -> YLangProj
 runYogo (PythonProj p) = YPythonProj (Py.toGraphPython p)
 
 main = do
+  putStrLn $ show m
   gen <- mkCSLabelGen
   args <- getArgs
   let language = (lowercase (args !! 0))
