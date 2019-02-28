@@ -37,7 +37,7 @@ import qualified Cubix.Language.Python.Parametric.Common as Py
 import Common.Trans
 
 data ParenLValue e l where
-  ParentLValue :: e AddressT -> ParenLValue e AddressT
+  ParenLValue :: e AddressT -> ParenLValue e AddressT
 
 type YPythonSig = ParenLValue :+: YGenericSig
 type PyID t = ID YPythonSig t

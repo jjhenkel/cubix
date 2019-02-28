@@ -1,9 +1,10 @@
-{-# Language FlexibleInstances #-}
+{-# LANGUAGE TypeOperators #-}
+
 module Main where
 
 import Control.Monad ( liftM, (<=<) )
 import Data.Char  ( toLower )
-import Data.Comp.Multi ( stripA )
+import Data.Comp.Multi
 import Data.Comp.Multi.Strategy.Classification ( dynProj )
 import Data.Maybe ( fromJust )
 import qualified Data.Map as Map
@@ -14,9 +15,10 @@ import Cubix.ParsePretty
 import Cubix.Language.Python.Parametric.Common as PCommon
 
 import Common.Trans
-import Common.DSL as CDSL
 import Python.Trans as Py
-import Python.DSL as PyDSL
+import DSL
+
+import Data.Proxy ( Proxy(..) )
 
 data LangProj = PythonProj (Project MPythonSig)
 data YLangProj = YPythonProj (YProject Py.YPythonSig)
@@ -34,8 +36,9 @@ lowercase = map toLower
 runYogo :: LangProj -> YLangProj
 runYogo (PythonProj p) = YPythonProj (Py.toGraphPython p)
 
+m = (Proxy :: Proxy (Py.ParenLValue :+: ConstF :+: MemGenesisF))
+
 main = do
-  putStrLn $ show PyDSL.m
   gen <- mkCSLabelGen
   args <- getArgs
   let language = (lowercase (args !! 0))
@@ -46,8 +49,9 @@ main = do
   let yogoProj = case projRes of
                    Nothing   -> error "Parse failed"
                    Just proj -> runYogo proj
+  putStrLn $ fromJust $ Map.lookup "python" (generateLangFiles m)
   case yogoProj of
-    YPythonProj proj -> putStrLn $ show $ Map.mapAccum (\a b -> (a ++ (show (Map.keys b)), 0)) "" proj
+    YPythonProj proj -> putStrLn $ show $ generateGraphFiles proj
 
 usage :: String
 usage = "Usage:\n"

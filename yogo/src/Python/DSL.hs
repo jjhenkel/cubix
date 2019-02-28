@@ -1,10 +1,12 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
-module Python.DSL (
-  m
-  ) where
+module Python.DSL () where
 
-import Data.Proxy ( Proxy(..) )
 import Data.Comp.Multi
 
 import Common.DSL
@@ -15,6 +17,7 @@ instance SigToLangDSL ParenLValue where
   namespace = const "python"
   nodeType = const "paren-lvalue"
   argNames = const ["lvalue"]
-  derives = const [("engine", "any-lvalue")]
+  derives = const ["engine/any-lvalue"]
 
-m = lang $ (Proxy :: Proxy (ParenLValue :+: ConstF :+: MemGenesisF))
+instance (ParenLValue :<: y) => NodeToGraphDSL ParenLValue y where
+  nodeArgs (ParenLValue lvalue) = [idToDSL lvalue]
