@@ -11,6 +11,7 @@
 
 module Python.Trans (
   YPythonSig
+  , ParenLValue(..)
   , toGraphPython
   ) where
 
@@ -35,10 +36,10 @@ import qualified Cubix.Language.Python.Parametric.Common as Py
 
 import Common.Trans
 
-data PyLhs e l where
-  PyLhs :: e [AddressT] -> PyLhs e [AddressT]
+data ParenLValue e l where
+  ParentLValue :: e AddressT -> ParenLValue e AddressT
 
-type YPythonSig = PyLhs :+: YGenericSig
+type YPythonSig = ParenLValue :+: YGenericSig
 type PyID t = ID YPythonSig t
 type YTranslatePyM m f t = GTranslateM m ((f :&: Label) Py.MPythonTermLab) (ID YPythonSig t)
 

@@ -29,7 +29,9 @@ library:
   source-dirs: src
   exposed-modules:
     - Common.Trans
+    - Common.DSL
     - Python.Trans
+    - Python.DSL
 
 executables:
   yogo-exe:

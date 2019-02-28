@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Common.Trans (
+module Generic (
   PrimitiveT
   , AddressT
   , ValueT
@@ -59,7 +59,7 @@ import Data.Proxy ( Proxy(..) )
 import Debug.Trace
 import Data.Typeable
 
-import Control.Lens ( makeLenses, over, use, (.=), (%=) )
+import Control.Lens ( makeLenses, over, use, (^.), (.=), (%=) )
 import Control.Monad ( MonadPlus, mzero, liftM )
 import Control.Monad.Trans.Maybe ( runMaybeT )
 import Control.Monad.Identity ( Identity(..), runIdentity )
