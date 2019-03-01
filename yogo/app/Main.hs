@@ -7,6 +7,7 @@ import Data.Char  ( toLower )
 import Data.Comp.Multi
 import Data.Comp.Multi.Strategy.Classification ( dynProj )
 import Data.Maybe ( fromJust )
+import Data.Map ( Map(..) )
 import qualified Data.Map as Map
 import System.Environment ( getArgs )
 
@@ -36,6 +37,18 @@ lowercase = map toLower
 runYogo :: LangProj -> YLangProj
 runYogo (PythonProj p) = YPythonProj (Py.toGraphPython p)
 
+writeTmp :: FilePath -> String -> IO FilePath
+writeTmp f s = do
+  let f' = "/tmp/" ++ f
+  writeFile f' s
+  return f'
+
+projToFiles :: YLangProj -> IO (Map FilePath FilePath)
+projToFiles prj = do
+  let graphFiles = (case prj of
+                      YPythonProj p -> generateGraphFiles p)
+  mapM (\(k, (f, s)) -> writeTmp f s >>= return . ((,) k)) (Map.toList graphFiles) >>= return . Map.fromList
+
 m = (Proxy :: Proxy (Py.ParenLValue :+: ConstF :+: MemGenesisF))
 
 main = do
@@ -50,8 +63,7 @@ main = do
                    Nothing   -> error "Parse failed"
                    Just proj -> runYogo proj
   putStrLn $ fromJust $ Map.lookup "python" (generateLangFiles m)
-  case yogoProj of
-    YPythonProj proj -> putStrLn $ show $ generateGraphFiles proj
+  projToFiles yogoProj
 
 usage :: String
 usage = "Usage:\n"
