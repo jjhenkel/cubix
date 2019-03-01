@@ -25,6 +25,8 @@ dependencies:
 - mtl
 - transformers
 - typed-process
+- bytestring
+- stm
 
 library:
   source-dirs: src

@@ -3,13 +3,17 @@
 module Main where
 
 import Control.Monad ( liftM, (<=<) )
+import Control.Concurrent.STM (atomically)
+import qualified Data.ByteString.Lazy.Char8 as L8
 import Data.Char  ( toLower )
 import Data.Comp.Multi
 import Data.Comp.Multi.Strategy.Classification ( dynProj )
+import Data.List ( intercalate )
 import Data.Maybe ( fromJust )
 import Data.Map ( Map(..) )
 import qualified Data.Map as Map
 import System.Environment ( getArgs )
+import System.Process.Typed
 
 import Cubix.Language.Info
 import Cubix.ParsePretty
@@ -61,7 +65,7 @@ langToFiles "python" = writeLangFiles nsPy $ generateLangFiles (Proxy :: Proxy P
 langToFiles _ = error "Unsupported language"
 
 
-yogoCommand = ["java", "-jar" ,"/home/pondpremt/matcher-prot/target/uberjar/matcher-prot-0.1.0-SNAPSHOT-standalone.jar"]
+yogoCommand' = ["java", "-jar" ,"/home/pondpremt/matcher-prot/target/uberjar/matcher-prot-0.1.0-SNAPSHOT-standalone.jar"]
 
 main = do
   gen <- mkCSLabelGen
@@ -76,8 +80,20 @@ main = do
                    Just proj -> runYogo proj
   langFiles <- langToFiles language
   graphFiles <- projToFiles yogoProj
-  putStrLn $ show langFiles
-  putStrLn $ show graphFiles
+
+  let langFilesArg = ((intercalate "," langFiles) ++ case additionalLangFiles of
+                                                               "" -> ""
+                                                               x -> "," ++ x)
+  let ruleFilesArg = ruleFiles
+  let graphFilesArg = intercalate "," (Map.elems graphFiles)
+
+  let yogoCommand = yogoCommand' ++ ["-l", langFilesArg, "-r", ruleFilesArg, "-g", graphFilesArg]
+  let catConfig = setStdin createPipe
+                $ setStdout byteStringOutput
+                $ proc (head yogoCommand) (tail yogoCommand)
+  withProcess_ catConfig $ \p -> do
+    atomically (getStdout p) >>= L8.putStrLn
+
 
 usage :: String
 usage = "Usage:\n"
