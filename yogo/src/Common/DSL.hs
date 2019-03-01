@@ -20,6 +20,8 @@ module Common.DSL (
   , primitiveToDSL
   , idToDSL
   , occurrenceToDSL
+
+  , nsCommon
   ) where
 
 import Data.Proxy ( Proxy(..) )
@@ -41,6 +43,9 @@ type QualifiedNodeType = String
 
 type NodeDef   = (NodeType, [ArgName], [QualifiedNodeType])
 type LangDefs  = Map Namespace [NodeDef]
+
+nsCommon :: Namespace
+nsCommon = "generic"
 
 class (Typeable f) => SigToLangDSL (f :: (* -> *) -> * -> *) where
   namespace :: Proxy f -> Namespace
@@ -64,25 +69,25 @@ instance (SigToLangDSL f1, SigToLangDSL f2) => SigToLangDSL (f1 :+: f2) where
   sigToDSL = const $ Map.unionWith (++) (sigToDSL (Proxy :: Proxy f1)) (sigToDSL (Proxy :: Proxy f2))
 
 instance SigToLangDSL MemGenesisF where
-  namespace = const "generic"
+  namespace = const nsCommon
   nodeType = const "mem-genesis"
   argNames = const []
   derives = const []
 
 instance SigToLangDSL ConstF where
-  namespace = const "generic"
+  namespace = const nsCommon
   nodeType = const "const"
   argNames = const ["$const"]
   derives = const []
 
 instance SigToLangDSL UnknownF where
-  namespace = const "generic"
+  namespace = const nsCommon
   nodeType = const "unknown"
   argNames = const ["src"]
   derives = const []
 
 instance SigToLangDSL MemF where
-  namespace = const "generic"
+  namespace = const nsCommon
   nodeType = const "mem"
   argNames = const ["src"]
   derives = const []

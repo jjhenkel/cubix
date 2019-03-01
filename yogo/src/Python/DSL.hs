@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Python.DSL () where
+module Python.DSL (nsPy) where
 
 import Data.Comp.Multi
 
@@ -13,8 +13,11 @@ import Common.DSL
 import Common.Trans
 import Python.Trans
 
+nsPy :: Namespace
+nsPy = "python"
+
 instance SigToLangDSL ParenLValue where
-  namespace = const "python"
+  namespace = const nsPy
   nodeType = const "paren-lvalue"
   argNames = const ["lvalue"]
   derives = const ["engine/any-lvalue"]

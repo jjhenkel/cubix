@@ -24,6 +24,7 @@ dependencies:
 - lens
 - mtl
 - transformers
+- typed-process
 
 library:
   source-dirs: src

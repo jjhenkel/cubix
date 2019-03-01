@@ -1,6 +1,10 @@
 module DSL (
-  generateLangFiles
+  Namespace
+  , generateLangFiles
   , generateGraphFiles
+
+  , nsCommon
+  , nsPy
   ) where
 
 import Data.Proxy ( Proxy(..) )

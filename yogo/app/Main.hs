@@ -43,27 +43,41 @@ writeTmp f s = do
   writeFile f' s
   return f'
 
+-- Return a map from source file paths to graph file paths
 projToFiles :: YLangProj -> IO (Map FilePath FilePath)
 projToFiles prj = do
   let graphFiles = (case prj of
                       YPythonProj p -> generateGraphFiles p)
   mapM (\(k, (f, s)) -> writeTmp f s >>= return . ((,) k)) (Map.toList graphFiles) >>= return . Map.fromList
 
-m = (Proxy :: Proxy (Py.ParenLValue :+: ConstF :+: MemGenesisF))
+writeLangFiles :: Namespace -> Map Namespace String -> IO [FilePath]
+writeLangFiles ns langFiles = do
+  fileLang <- writeTmp ("lang-" ++ ns) (fromJust $ Map.lookup ns langFiles)
+  fileGeneric <- writeTmp "lang-generic" (fromJust $ Map.lookup "generic" langFiles)
+  return [fileGeneric, fileLang]
+
+langToFiles :: String -> IO [FilePath]
+langToFiles "python" = writeLangFiles nsPy $ generateLangFiles (Proxy :: Proxy Py.YPythonSig)
+langToFiles _ = error "Unsupported language"
+
+
+yogoCommand = ["java", "-jar" ,"/home/pondpremt/matcher-prot/target/uberjar/matcher-prot-0.1.0-SNAPSHOT-standalone.jar"]
 
 main = do
   gen <- mkCSLabelGen
   args <- getArgs
   let language = (lowercase (args !! 0))
-  let langFiles = (args !! 1)
+  let additionalLangFiles = args !! 1
   let ruleFiles = (args !! 2)
   let sourceFiles = (drop 3 args)
   projRes <- parseProj gen language sourceFiles
   let yogoProj = case projRes of
                    Nothing   -> error "Parse failed"
                    Just proj -> runYogo proj
-  putStrLn $ fromJust $ Map.lookup "python" (generateLangFiles m)
-  projToFiles yogoProj
+  langFiles <- langToFiles language
+  graphFiles <- projToFiles yogoProj
+  putStrLn $ show langFiles
+  putStrLn $ show graphFiles
 
 usage :: String
 usage = "Usage:\n"

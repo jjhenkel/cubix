@@ -17,6 +17,7 @@ extra-deps:
 - language-javascript-0.6.0.9
 - language-dot-0.1.0
 - fgl-5.5.3.0
+- typed-process-0.2.4.0
 - git: git@github.com:jkoppel/language-c.git
   commit: e5bdaaa8cbf28d09962ccd64a50808d8e5032f85
 - git: git@github.com:jkoppel/language-java.git
