@@ -57,13 +57,8 @@ instance YTrans Py.Statement Py.MPythonSig YPythonSig StatementT where
 
 instance YTrans Py.Module Py.MPythonSig YPythonSig ScopeT where
   ytrans (Py.Module body :&: _) = do
-    id <- getNextID
-    let name = Name "Module"
-    nameScope %= (name :)
-    memScope  %= (id :)
-    file .= Map.singleton name []
+    newScope $ Name "Module"
     _ :: PyID [StatementT] <- ytranslate body
-    f <- use file
     return Scope
 
 instance YTrans Py.IdentIsPyLValue Py.MPythonSig YPythonSig AddressT where

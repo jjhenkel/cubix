@@ -53,11 +53,8 @@ data Q (e :: * -> *) t where
   Q :: e AddressT -> e MemoryT -> Q e ValueT
 
 -- Generic nodes
-data AnyStackF (e :: * -> *) t where
-  AnyStackF :: AnyStackF e AddressT
-
-data AnyHeapF (e :: * -> *) t where
-  AnyHeapF :: AnyHeapF e AddressT
+data AnyStack (e :: * -> *) t
+data AnyHeap (e :: * -> *) t
 
 data NothingF (e :: * -> *) t where
   NothingF :: NothingF e t
@@ -72,16 +69,16 @@ data IdentF (e :: * -> *) t where
 data AssignF e t where
   AssignF :: e ValueT -> e AddressT -> e MemoryT -> AssignF e MemValT
 
-data UnknownF e t where
-  UnknownF :: e MemoryT -> UnknownF e MemoryT
+data MemGenesisF (e :: * -> *) t where
+  MemGenesisF :: MemGenesisF e MemoryT
 
 data MemF e t where
   MemF :: e MemValT -> MemF e MemoryT
 
-data MemGenesisF (e :: * -> *) t where
-  MemGenesisF :: MemGenesisF e MemoryT
+data UnknownF e t where
+  UnknownF :: e MemoryT -> UnknownF e MemoryT
 
-type YGenericSig = UnknownF :+: MemF :+: MemGenesisF :+: AssignF :+: IdentF :+: ConstF :+: NothingF :+: AnyHeapF :+: AnyStackF :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
+type YGenericSig = UnknownF :+: MemF :+: MemGenesisF :+: AssignF :+: IdentF :+: ConstF :+: NothingF :+: AnyHeap :+: AnyStack :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
 
 newtype Name = Name [Char] deriving (Eq, Show, Ord)
 newtype Occurrence = Occurrence [Label] deriving (Eq, Show)
@@ -132,17 +129,19 @@ instance Show (YGraphEntry f) where
 yinject :: (g :<: f) => g (ID f) t -> Node f t
 yinject = Node . inj
 
-getScope :: (MonadYogo f m) => m Name
-getScope = liftM head $ use nameScope
+getScopeName :: (MonadYogo f m) => m Name
+getScopeName = liftM head $ use nameScope
+
+newScope :: (MonadYogo f m, MemGenesisF :<: f) => Name -> m (ID f MemoryT)
+newScope name = do
+  nameScope %= (name :)
+  file .= Map.singleton name []
+  makeNode [] MemGenesisF >>= updateMem
 
 addEntry :: (MonadYogo f m) => YGraphEntry f -> m ()
 addEntry e = do
-  name <- getScope
-  m <- use file
-  traceM $ "Before Add " ++ (show (Map.lookup name m))
+  name <- getScopeName
   file %= Map.adjust (e :) name
-  m <- use file
-  traceM $ "After Add " ++ (show (Map.lookup name m))
 
 getNextID :: (MonadYogo f m) => m (ID f t)
 getNextID = lastID %= (+ 1) >> liftM ID (use lastID)

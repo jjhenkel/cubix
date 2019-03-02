@@ -69,7 +69,8 @@ class (Typeable f) => SigToLangDSL (f :: (* -> *) -> * -> *) where
 
 instance (SigToLangDSL f1, SigToLangDSL f2) => SigToLangDSL (f1 :+: f2) where
   nodeDef = undefined
-  sigToDSL _ = Map.unionWith (++) (sigToDSL (Proxy :: Proxy f1)) (sigToDSL (Proxy :: Proxy f2))
+  -- Signature is defined backward
+  sigToDSL _ = Map.unionWith (++) (sigToDSL (Proxy :: Proxy f2)) (sigToDSL (Proxy :: Proxy f1))
 
 anyMem :: QualifiedNodeType
 anyMem = qualifiedNodeType (Proxy :: Proxy AnyMem)
@@ -78,12 +79,12 @@ anyLValue :: QualifiedNodeType
 anyLValue = qualifiedNodeType (Proxy :: Proxy AnyLValue)
 
 anyStackLValue :: QualifiedNodeType
-anyStackLValue = qualifiedNodeType (Proxy :: Proxy AnyStackF)
+anyStackLValue = qualifiedNodeType (Proxy :: Proxy AnyStack)
 
 anyHeapLValue :: QualifiedNodeType
-anyHeapLValue = qualifiedNodeType (Proxy :: Proxy AnyHeapF)
+anyHeapLValue = qualifiedNodeType (Proxy :: Proxy AnyHeap)
 
--- Engine Nodes
+-- Engine Nodes. Not generated
 
 instance SigToLangDSL AnyNode where nodeDef _ = (nsEngine, "any-node", [], [])
 instance SigToLangDSL AnyLValue where nodeDef _ = (nsEngine, "any-lvalue", [], [])
@@ -92,8 +93,8 @@ instance SigToLangDSL Q where nodeDef _ = (nsEngine, "q", [], [])
 
 -- Generic Nodes
 
-instance SigToLangDSL AnyStackF where nodeDef _ = (nsCommon, "any-stack-lvalue", [], [anyLValue])
-instance SigToLangDSL AnyHeapF where nodeDef _ = (nsCommon, "any-heap-lvalue", [], [anyLValue])
+instance SigToLangDSL AnyStack where nodeDef _ = (nsCommon, "any-stack-lvalue", [], [anyLValue])
+instance SigToLangDSL AnyHeap where nodeDef _ = (nsCommon, "any-heap-lvalue", [], [anyLValue])
 instance SigToLangDSL NothingF where nodeDef _ = (nsCommon, "nothing", [], [])
 instance SigToLangDSL ConstF where nodeDef _ = (nsCommon, "const", ["$const"], [])
 instance SigToLangDSL IdentF where nodeDef _ = (nsCommon, "ident", ["$name"], [anyStackLValue])
@@ -114,27 +115,57 @@ instance (NodeToGraphDSL f1 y, NodeToGraphDSL f2 y) => NodeToGraphDSL (f1 :+: f2
   nodeArgs = caseH nodeArgs nodeArgs
   nodeForm = caseH nodeForm nodeForm
 
-instance (MemGenesisF :<: y) => NodeToGraphDSL MemGenesisF y where
-  nodeArgs _ = []
+instance (AnyNode :<: y) => NodeToGraphDSL AnyNode y where
+  nodeArgs _ = error "AnyNode should not be an explicit node"
 
-instance (MemF :<: y) => NodeToGraphDSL MemF y where
+instance (AnyLValue :<: y) => NodeToGraphDSL AnyLValue y where
+  nodeArgs _ = error "AnyLValue should not be an explicit node"
+
+instance (AnyMem :<: y) => NodeToGraphDSL AnyMem y where
+  nodeArgs _ = error "AnyMem should not be an explicit node"
+
+instance (AnyStack :<: y) => NodeToGraphDSL AnyStack y where
+  nodeArgs _ = error "AnyStack should not be an explicit node"
+
+instance (AnyHeap :<: y) => NodeToGraphDSL AnyHeap y where
+  nodeArgs _ = error "AnyHeap should not be an explicit node"
+
+instance (Q :<: y) => NodeToGraphDSL Q y where
+  nodeArgs (Q lvalue mem) = [idToDSL mem, idToDSL lvalue]
+
+instance (NothingF :<: y) => NodeToGraphDSL NothingF y where
   nodeArgs _ = []
 
 instance (ConstF :<: y) => NodeToGraphDSL ConstF y where
   nodeArgs (ConstF p) = [primitiveToDSL p]
 
+instance (IdentF :<: y) => NodeToGraphDSL IdentF y where
+  nodeArgs (IdentF name) = [quoteStr name]
+
+instance (AssignF :<: y) => NodeToGraphDSL AssignF y where
+  nodeArgs (AssignF rvalue lvalue mem) = [idToDSL mem, idToDSL lvalue, idToDSL rvalue]
+
+instance (MemGenesisF :<: y) => NodeToGraphDSL MemGenesisF y where
+  nodeArgs _ = []
+
+instance (MemF :<: y) => NodeToGraphDSL MemF y where
+  nodeArgs (MemF src) = [idToDSL src]
+
 instance (UnknownF :<: y) => NodeToGraphDSL UnknownF y where
   nodeArgs (UnknownF mem) = [idToDSL mem]
+
+quoteStr :: String -> String
+quoteStr s = "\"" ++ s ++ "\""
 
 primitiveToDSL :: Primitive -> String
 primitiveToDSL (IntegerF n) = show n
 primitiveToDSL (IntF n) = show n
 primitiveToDSL (BoolF b) = if b then "true" else "false"
-primitiveToDSL (StringF s) = s
+primitiveToDSL (StringF s) = quoteStr s
 
 idToDSL :: ID f t -> String
 idToDSL (ID n) = "n-" ++ show n
 idToDSL t = error $ "id \"" ++ show t ++ "\" cannot be translated to DSL"
 
 occurrenceToDSL :: Occurrence -> String
-occurrenceToDSL (Occurrence labels) = "[" ++ (intercalate " " $ map (\l -> "\"" ++ show l ++ "\"") labels) ++ "]"
+occurrenceToDSL (Occurrence labels) = "[" ++ (intercalate " " $ map (\l -> quoteStr $ show l) labels) ++ "]"

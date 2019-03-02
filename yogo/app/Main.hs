@@ -88,6 +88,7 @@ main = do
   let graphFilesArg = intercalate "," (Map.elems graphFiles)
 
   let yogoCommand = yogoCommand' ++ ["-l", langFilesArg, "-r", ruleFilesArg, "-g", graphFilesArg]
+  print $ "yogoCommand " ++ show yogoCommand
   let catConfig = setStdin createPipe
                 $ setStdout byteStringOutput
                 $ proc (head yogoCommand) (tail yogoCommand)
