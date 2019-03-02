@@ -11,7 +11,7 @@
 
 module Python.Trans (
   YPythonSig
-  , ParenLValue(..)
+  , PyLhs(..)
   , toGraphPython
   ) where
 
@@ -36,10 +36,11 @@ import qualified Cubix.Language.Python.Parametric.Common as Py
 
 import Common.Trans
 
-data ParenLValue e l where
-  ParenLValue :: e AddressT -> ParenLValue e AddressT
+-- Represent a compound address
+data PyLhs e l where
+  PyLhs :: e AddressT -> e AddressT -> PyLhs e AddressT
 
-type YPythonSig = ParenLValue :+: YGenericSig
+type YPythonSig = PyLhs :+: YGenericSig
 type PyID t = ID YPythonSig t
 type YTranslatePyM m f t = GTranslateM m ((f :&: Label) Py.MPythonTermLab) (ID YPythonSig t)
 
@@ -47,19 +48,15 @@ type MonadYogoPy m = (MonadYogo YPythonSig m)
 type CanYTransPy f = (CanYTrans f)
 
 instance YTrans Py.Expr Py.MPythonSig YPythonSig ValueT where
-  ytrans ((Py.Int n _ _) :&: label) = makeNode (ConstF (IntegerF n)) [label]
+  ytrans (Py.Int n _ _ :&: l) = makeNode [l] (ConstF (IntegerF n))
   ytrans f = error "Not Implemented"
 
 instance YTrans Py.Statement Py.MPythonSig YPythonSig StatementT where
-  ytrans ((Py.StmtExpr expr _) :&: _) = do
-    traceM "StmtExpr"
-    _ :: PyID ValueT <- ytranslate expr
-    return Statement
+  ytrans (Py.StmtExpr expr _ :&: _) = ytranslate expr >>= \(_ :: PyID ValueT) -> return Statement
   ytrans f = error "Not Implemented"
 
 instance YTrans Py.Module Py.MPythonSig YPythonSig ScopeT where
-  ytrans ((Py.Module body) :&: _) = do
-    traceM "module"
+  ytrans (Py.Module body :&: _) = do
     id <- getNextID
     let name = Name "Module"
     nameScope %= (name :)
@@ -67,8 +64,23 @@ instance YTrans Py.Module Py.MPythonSig YPythonSig ScopeT where
     file .= Map.singleton name []
     _ :: PyID [StatementT] <- ytranslate body
     f <- use file
-    traceM $ show $ f
     return Scope
+
+instance YTrans Py.IdentIsPyLValue Py.MPythonSig YPythonSig AddressT where
+  ytrans (Py.IdentIsPyLValue t :&: _) = ytranslate t
+
+instance YTrans Py.PyLhs Py.MPythonSig YPythonSig AddressT where
+  ytrans (Py.PyLhs t :&: l) = do
+    lvalues <- ytranslate t
+    go (fromIds lvalues)
+      where go [] = makeNode [] NothingF
+            go ((id, occurrence) : xs) = go xs >>= (makeNode' occurrence) . (PyLhs id)
+
+instance YTrans Py.ExprIsRhs Py.MPythonSig YPythonSig ValueT where
+  ytrans (Py.ExprIsRhs t :&: _) = ytranslate t
+
+instance YTrans Py.AssignIsStatement Py.MPythonSig YPythonSig StatementT where
+  ytrans (Py.AssignIsStatement t :&: _) = ytranslate t >>= \(_ :: PyID MemValT) -> return Statement
 
 ytransPythonModule :: (MonadYogoPy m) => TranslateM m Py.MPythonTermLab Py.ModuleL (ID YPythonSig ScopeT)
 ytransPythonModule = ytranslate

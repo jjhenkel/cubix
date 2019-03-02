@@ -21,7 +21,7 @@ import Common.DSL
 import Python.DSL
 
 generateNodeLine :: NodeDef -> String
-generateNodeLine (node, args, derives) = "(defnode " ++ node ++ " [" ++ (intercalate " " args) ++ "] " ++ (intercalate " " derives) ++ ")"
+generateNodeLine (_, node, args, derives) = "(defnode " ++ node ++ " [" ++ (intercalate " " args) ++ "] " ++ (intercalate " " derives) ++ ")"
 
 generateLangFile :: Namespace -> [NodeDef] -> String
 generateLangFile ns nodes = "(ns " ++ ns ++ ")\n\n" ++ (intercalate "\n" (map generateNodeLine nodes))

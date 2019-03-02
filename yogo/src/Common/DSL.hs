@@ -17,6 +17,10 @@ module Common.DSL (
 
   , SigToLangDSL(..)
   , NodeToGraphDSL(..)
+  , anyMem
+  , anyLValue
+  , anyStackLValue
+  , anyHeapLValue
   , primitiveToDSL
   , idToDSL
   , occurrenceToDSL
@@ -41,56 +45,62 @@ type NodeType  = String
 type ArgName   = String
 type QualifiedNodeType = String
 
-type NodeDef   = (NodeType, [ArgName], [QualifiedNodeType])
+type NodeDef   = (Namespace, NodeType, [ArgName], [QualifiedNodeType])
 type LangDefs  = Map Namespace [NodeDef]
 
 nsCommon :: Namespace
 nsCommon = "generic"
 
-class (Typeable f) => SigToLangDSL (f :: (* -> *) -> * -> *) where
-  namespace :: Proxy f -> Namespace
-  nodeType :: Proxy f -> NodeType
-  argNames :: Proxy f -> [ArgName]
-  derives :: Proxy f -> [QualifiedNodeType]
+-- Here for completion. We don't generate engine file.
+nsEngine :: Namespace
+nsEngine = "engine"
 
-  qualifiedNodeType :: Proxy f -> QualifiedNodeType
-  qualifiedNodeType f = (namespace f) ++ "/" ++ (nodeType f)
+qualifiedNodeType :: (SigToLangDSL f) => Proxy f -> QualifiedNodeType
+qualifiedNodeType f = let (ns, typ, _, _) = nodeDef f in ns ++ "/" ++ typ
+
+nsOf :: (SigToLangDSL f) => Proxy f -> Namespace
+nsOf f = let (ns, _, _, _) = nodeDef f in ns
+
+class (Typeable f) => SigToLangDSL (f :: (* -> *) -> * -> *) where
+  nodeDef :: Proxy f -> NodeDef
 
   sigToDSL :: Proxy f -> LangDefs
-  sigToDSL f = Map.singleton (namespace f) [(nodeType f, argNames f, derives f)]
+  sigToDSL f = Map.singleton (nsOf f) [nodeDef f]
 
 instance (SigToLangDSL f1, SigToLangDSL f2) => SigToLangDSL (f1 :+: f2) where
-  namespace = undefined
-  nodeType = undefined
-  argNames = undefined
-  derives = undefined
-  qualifiedNodeType = undefined
+  nodeDef = undefined
+  sigToDSL _ = Map.unionWith (++) (sigToDSL (Proxy :: Proxy f1)) (sigToDSL (Proxy :: Proxy f2))
 
-  sigToDSL = const $ Map.unionWith (++) (sigToDSL (Proxy :: Proxy f1)) (sigToDSL (Proxy :: Proxy f2))
+anyMem :: QualifiedNodeType
+anyMem = qualifiedNodeType (Proxy :: Proxy AnyMem)
 
-instance SigToLangDSL MemGenesisF where
-  namespace = const nsCommon
-  nodeType = const "mem-genesis"
-  argNames = const []
-  derives = const []
+anyLValue :: QualifiedNodeType
+anyLValue = qualifiedNodeType (Proxy :: Proxy AnyLValue)
 
-instance SigToLangDSL ConstF where
-  namespace = const nsCommon
-  nodeType = const "const"
-  argNames = const ["$const"]
-  derives = const []
+anyStackLValue :: QualifiedNodeType
+anyStackLValue = qualifiedNodeType (Proxy :: Proxy AnyStackF)
 
-instance SigToLangDSL UnknownF where
-  namespace = const nsCommon
-  nodeType = const "unknown"
-  argNames = const ["src"]
-  derives = const []
+anyHeapLValue :: QualifiedNodeType
+anyHeapLValue = qualifiedNodeType (Proxy :: Proxy AnyHeapF)
 
-instance SigToLangDSL MemF where
-  namespace = const nsCommon
-  nodeType = const "mem"
-  argNames = const ["src"]
-  derives = const []
+-- Engine Nodes
+
+instance SigToLangDSL AnyNode where nodeDef _ = (nsEngine, "any-node", [], [])
+instance SigToLangDSL AnyLValue where nodeDef _ = (nsEngine, "any-lvalue", [], [])
+instance SigToLangDSL AnyMem where nodeDef _ = (nsEngine, "any-mem", [], [])
+instance SigToLangDSL Q where nodeDef _ = (nsEngine, "q", [], [])
+
+-- Generic Nodes
+
+instance SigToLangDSL AnyStackF where nodeDef _ = (nsCommon, "any-stack-lvalue", [], [anyLValue])
+instance SigToLangDSL AnyHeapF where nodeDef _ = (nsCommon, "any-heap-lvalue", [], [anyLValue])
+instance SigToLangDSL NothingF where nodeDef _ = (nsCommon, "nothing", [], [])
+instance SigToLangDSL ConstF where nodeDef _ = (nsCommon, "const", ["$const"], [])
+instance SigToLangDSL IdentF where nodeDef _ = (nsCommon, "ident", ["$name"], [anyStackLValue])
+instance SigToLangDSL AssignF where nodeDef _ = (nsCommon, "assign", ["mem", "lvalue", "rvalue"], [])
+instance SigToLangDSL MemGenesisF where nodeDef _ = (nsCommon, "mem-genesis", [], [anyMem])
+instance SigToLangDSL UnknownF where nodeDef _ = (nsCommon, "unknown", ["src"], [anyMem])
+instance SigToLangDSL MemF where nodeDef _ = (nsCommon, "mem", ["src"], [anyMem])
 
 ----
 
@@ -105,10 +115,10 @@ instance (NodeToGraphDSL f1 y, NodeToGraphDSL f2 y) => NodeToGraphDSL (f1 :+: f2
   nodeForm = caseH nodeForm nodeForm
 
 instance (MemGenesisF :<: y) => NodeToGraphDSL MemGenesisF y where
-  nodeArgs = const []
+  nodeArgs _ = []
 
 instance (MemF :<: y) => NodeToGraphDSL MemF y where
-  nodeArgs = const []
+  nodeArgs _ = []
 
 instance (ConstF :<: y) => NodeToGraphDSL ConstF y where
   nodeArgs (ConstF p) = [primitiveToDSL p]
