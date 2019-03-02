@@ -48,7 +48,8 @@ type MonadYogoPy m = (MonadYogo YPythonSig m)
 type CanYTransPy f = (CanYTrans f)
 
 instance YTrans Py.Expr Py.MPythonSig YPythonSig ValueT where
-  ytrans (Py.Int n _ _ :&: l) = makeNode [l] (ConstF (IntegerF n))
+  ytrans (Py.Int n _ _ :&: l) = insertNode [l] (ConstF (IntegerF n))
+  ytrans (Py.Var ident _ :&: l) = ytranslate ident >>= iQ [l]
   ytrans f = error "Not Implemented"
 
 instance YTrans Py.Statement Py.MPythonSig YPythonSig StatementT where
@@ -61,15 +62,18 @@ instance YTrans Py.Module Py.MPythonSig YPythonSig ScopeT where
     _ :: PyID [StatementT] <- ytranslate body
     return Scope
 
-instance YTrans Py.IdentIsPyLValue Py.MPythonSig YPythonSig AddressT where
-  ytrans (Py.IdentIsPyLValue t :&: _) = ytranslate t
-
 instance YTrans Py.PyLhs Py.MPythonSig YPythonSig AddressT where
   ytrans (Py.PyLhs t :&: l) = do
     lvalues <- ytranslate t
     go (fromIds lvalues)
-      where go [] = makeNode [] NothingF
-            go ((id, occurrence) : xs) = go xs >>= (makeNode' occurrence) . (PyLhs id)
+      where go [] = insertNode [] NothingF
+            go ((id, occurrence) : xs) = go xs >>= (insertNode' occurrence) . (PyLhs id)
+
+instance YTrans Py.IdentIsIdent Py.MPythonSig YPythonSig AddressT where
+  ytrans (Py.IdentIsIdent t :&: _) = ytranslate t
+
+instance YTrans Py.IdentIsPyLValue Py.MPythonSig YPythonSig AddressT where
+  ytrans (Py.IdentIsPyLValue t :&: _) = ytranslate t
 
 instance YTrans Py.ExprIsRhs Py.MPythonSig YPythonSig ValueT where
   ytrans (Py.ExprIsRhs t :&: _) = ytranslate t

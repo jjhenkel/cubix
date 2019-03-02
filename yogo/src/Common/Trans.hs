@@ -126,9 +126,6 @@ instance Show (YGraphEntry f) where
   show (YGraphEq (E id1) (E id2)) = "Eq " ++ show id1 ++  " " ++ show id2
   show (YGraphMemSuccessor id1 id2) = "MemSuc " ++ show id1 ++ " " ++ show id2
 
-yinject :: (g :<: f) => g (ID f) t -> Node f t
-yinject = Node . inj
-
 getScopeName :: (MonadYogo f m) => m Name
 getScopeName = liftM head $ use nameScope
 
@@ -136,24 +133,26 @@ newScope :: (MonadYogo f m, MemGenesisF :<: f) => Name -> m (ID f MemoryT)
 newScope name = do
   nameScope %= (name :)
   file .= Map.singleton name []
-  makeNode [] MemGenesisF >>= updateMem
-
-addEntry :: (MonadYogo f m) => YGraphEntry f -> m ()
-addEntry e = do
-  name <- getScopeName
-  file %= Map.adjust (e :) name
+  insertNode [] MemGenesisF >>= updateMem
 
 getNextID :: (MonadYogo f m) => m (ID f t)
 getNextID = lastID %= (+ 1) >> liftM ID (use lastID)
 
-makeNode' :: (MonadYogo f m, g :<: f) => Occurrence -> g (ID f) t -> m (ID f t)
-makeNode' occ node = do
+insertNode' :: (MonadYogo f m, g :<: f) => Occurrence -> g (ID f) t -> m (ID f t)
+insertNode' occ node = do
   id <- getNextID
-  addEntry $ YGraphNode (E id) (E $ yinject node) occ
+  let entry = YGraphNode (E id) ((E . Node . inj) node) occ
+  getScopeName >>= (file %=) . (Map.adjust (entry :))
   return id
 
-makeNode :: (MonadYogo f m, g :<: f) => [Label] -> g (ID f) t -> m (ID f t)
-makeNode labels = makeNode' (Occurrence labels)
+insertNode :: (MonadYogo f m, g :<: f) => [Label] -> g (ID f) t -> m (ID f t)
+insertNode labels = insertNode' (Occurrence labels)
+
+iMemF :: (MonadYogo f m, MemF :<: f) => [Label] -> ID f MemValT -> m (ID f MemoryT)
+iMemF labels memVal = insertNode labels (MemF memVal) >>= updateMem
+
+iQ :: (MonadYogo f m, Q :<: f) => [Label] -> ID f AddressT -> m (ID f ValueT)
+iQ labels lvalue = getMem >>= (insertNode labels) . (Q lvalue)
 
 getMem :: (MonadYogo f m) => m (ID f MemoryT)
 getMem = liftM head $ use memScope
@@ -161,14 +160,11 @@ getMem = liftM head $ use memScope
 updateMem :: (MonadYogo f m) => ID f MemoryT -> m (ID f MemoryT)
 updateMem mid = memScope %= (mid :) . tail >> return mid
 
-makeMem :: (MonadYogo f m, MemF :<: f) => [Label] -> ID f MemValT -> m (ID f MemoryT)
-makeMem labels memVal = makeNode labels (MemF memVal) >>= updateMem
-
 updateMemVal :: (MonadYogo f m, MemF :<: f) => ID f MemValT -> m (ID f MemValT)
-updateMemVal memVal = makeMem [] memVal >> return memVal
+updateMemVal memVal = iMemF [] memVal >> return memVal
 
 ytransUnknown :: (CanYTrans f, MonadYogo y m, UnknownF :<: y) => YTranslateM m f g y MemoryT
-ytransUnknown (f :&: l) = getMem >>= (makeNode [l]) . UnknownF >>= updateMem
+ytransUnknown (f :&: l) = getMem >>= (insertNode [l]) . UnknownF >>= updateMem
 
 -- s is needed, otherwise cause Incoherent Instances when f is a signature type
 class (CanYTrans f) => YTrans f g y t where
@@ -194,7 +190,7 @@ instance (YTrans g g y t, YTrans g g y [t]) => YTrans Cx.ListF g y [t] where
     return $ IDs ((id, Occurrence [l]) : ids)
 
 instance (Cx.Ident :<: g, IdentF :<: y) => YTrans Cx.Ident g y AddressT where
-  ytrans (Cx.Ident name :&: l) = makeNode [l] (IdentF name)
+  ytrans (Cx.Ident name :&: l) = insertNode [l] (IdentF name)
 
 instance (Cx.Assign :<: g, AssignF :<: y, MemF :<: y, YTrans g g y AddressT, YTrans g g y ValueT) => YTrans Cx.Assign g y MemValT where
-  ytrans (Cx.Assign lv _ rv :&: l) = AssignF <$> ytranslate rv <*> ytranslate lv <*> getMem >>= makeNode [l] >>= updateMemVal
+  ytrans (Cx.Assign lv _ rv :&: l) = AssignF <$> ytranslate rv <*> ytranslate lv <*> getMem >>= insertNode [l] >>= updateMemVal
