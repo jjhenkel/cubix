@@ -65,6 +65,8 @@ instance YTrans Py.Op Py.MPythonSig YPythonSig OpT where
 instance YTrans Py.Expr Py.MPythonSig YPythonSig ValueT where
   ytrans (Py.Int n _ _ :&: l) = insertNode [l] (ConstF (IntegerF n))
   ytrans (Py.Var ident _ :&: l) = ytranslate ident >>= iQ [l]
+  ytrans (Py.Subscript m k _ :&: l) =
+    SelF <$> ytranslate m <*> ytranslate k >>= insertNode [l] >>= iQ [l]
   ytrans (Py.BinaryOp op arg1 arg2 _ :&: l) =
     BinOpF <$> ytranslate op <*> ytranslate arg1 <*> ytranslate arg2 >>= insertNode [l]
   ytrans (Py.UnaryOp op arg _ :&: l) =
@@ -81,6 +83,10 @@ instance YTrans Py.Module Py.MPythonSig YPythonSig ScopeT where
     newScope $ Name "Module"
     _ :: PyID [StatementT] <- ytranslate body
     return Scope
+
+instance YTrans Py.SubscriptLValue Py.MPythonSig YPythonSig AddressT where
+  ytrans (Py.SubscriptLValue m k :&: l) =
+    SelF <$> ytranslate m <*> ytranslate k >>= insertNode [l]
 
 instance YTrans Py.PyLhs Py.MPythonSig YPythonSig AddressT where
   ytrans (Py.PyLhs t :&: l) = do

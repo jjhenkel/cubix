@@ -1,5 +1,4 @@
 int main() {
-  int x;
-  int y;
-  y = (x = 1);
+int x;
+x += 1;
 }

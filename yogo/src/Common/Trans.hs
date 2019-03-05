@@ -9,6 +9,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Common.Trans where
 
@@ -87,10 +88,13 @@ data ConstF (e :: * -> *) t where
 data IdentF (e :: * -> *) t where
   IdentF :: String -> IdentF e AddressT
 
-data BinOpF (e :: * -> *) t where
+data SelF e t where
+  SelF :: e ValueT -> e ValueT -> SelF e AddressT
+
+data BinOpF e t where
   BinOpF :: e OpT -> e ValueT -> e ValueT -> BinOpF e ValueT
 
-data UnOpF (e :: * -> *) t where
+data UnOpF e t where
   UnOpF :: e OpT -> e ValueT -> UnOpF e ValueT
 
 -- Arguments by order of execution
@@ -103,7 +107,7 @@ data FunctionCallF e t where
 data FunctionArgsF e t where
   FunctionArgsF :: e ValueT -> e [FArgT] -> FunctionArgsF e [FArgT]
 
-type YGenericSig = FunctionArgsF :+: FunctionCallF :+: AssignF :+: UnOpF :+: BinOpF :+: IdentF :+: ConstF :+: NothingF :+: UnknownF :+: ValF :+: MemF :+: MemGenesisF :+: AnyHeap :+: AnyStack :+: CommonOp :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
+type YGenericSig = FunctionArgsF :+: FunctionCallF :+: AssignF :+: UnOpF :+: BinOpF :+: SelF :+: IdentF :+: ConstF :+: NothingF :+: UnknownF :+: ValF :+: MemF :+: MemGenesisF :+: AnyHeap :+: AnyStack :+: CommonOp :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
 
 newtype Name = Name [Char] deriving (Eq, Show, Ord)
 newtype Occurrence = Occurrence [Label] deriving (Eq, Show)
@@ -218,9 +222,9 @@ instance (YTrans g g y t, YTrans g g y [t]) => YTrans Cx.ListF g y [t] where
 instance (Cx.Ident :<: g, IdentF :<: y) => YTrans Cx.Ident g y AddressT where
   ytrans (Cx.Ident name :&: l) = insertNode [l] (IdentF name)
 
-instance (Cx.Assign :<: g, AssignF :<: y, MemF :<: y, YTrans g g y AddressT, YTrans g g y ValueT) => YTrans Cx.Assign g y MemValT where
-  -- Assumes to be :=
-  ytrans (Cx.Assign lv _ rv :&: l) =
+instance (Cx.Assign :<: g, Cx.AssignOpEquals :<: g, AssignF :<: y, MemF :<: y, YTrans g g y AddressT, YTrans g g y ValueT) => YTrans Cx.Assign g y MemValT where
+  -- Assumes to be :=. Not true outside of Python
+  ytrans (Cx.Assign lv (project' -> Just (Cx.AssignOpEquals)) rv :&: l) =
     AssignF <$> ytranslate rv <*> ytranslate lv <*> getMem >>= insertNode [l] >>= updateMemVal
 
 instance (Cx.FunctionCall :<: g, FunctionCallF :<: y, MemF :<: y, YTrans g g y ValueT, YTrans g g y [FArgT]) => YTrans Cx.FunctionCall g y MemValT where

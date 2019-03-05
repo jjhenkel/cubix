@@ -109,6 +109,7 @@ instance SigToLangDSL ValF where nodeDef _ = Just (nsCommon, "val", ["src"], [])
 instance SigToLangDSL NothingF where nodeDef _ = Just (nsCommon, "nothing", [], [])
 instance SigToLangDSL ConstF where nodeDef _ = Just (nsCommon, "const", ["$const"], [])
 instance SigToLangDSL IdentF where nodeDef _ = Just (nsCommon, "ident", ["$name"], [anyStackLValue])
+instance SigToLangDSL SelF where nodeDef _ = Just (nsCommon, "sel", ["base", "offset"], [])
 instance SigToLangDSL BinOpF where nodeDef _ = Just (nsCommon, "binop", ["$op", "arg1", "arg2"], [])
 instance SigToLangDSL UnOpF where nodeDef _ = Just (nsCommon, "unop", ["$op", "arg"], [])
 instance SigToLangDSL AssignF where nodeDef _ = Just (nsCommon, "assign", ["mem", "lvalue", "rvalue"], [])
@@ -169,6 +170,9 @@ instance (ConstF :<: y) => NodeToGraphDSL ConstF y where
 
 instance (IdentF :<: y) => NodeToGraphDSL IdentF y where
   nodeArgs (IdentF name) = [quoteStr name]
+
+instance (SelF :<: y) => NodeToGraphDSL SelF y where
+  nodeArgs (SelF base offset) = [idToDSL base, idToDSL offset]
 
 instance (BinOpF :<: y) => NodeToGraphDSL BinOpF y where
   nodeArgs (BinOpF op arg1 arg2) = [idToDSL op, idToDSL arg1, idToDSL arg2]
