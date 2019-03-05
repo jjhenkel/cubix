@@ -3,14 +3,14 @@
 ;;  Swap
 ;; -----------
 
-(defnode lv-read-assign [mem l1 l2])
+#_(defnode lv-read-assign [mem l1 l2])
 
-(defrule lv-read-assignment
+#_(defrule lv-read-assignment
   (as <- (generic/assign mem-in a (engine/q mem-in b)))
   =>
   (matches/lv-read-assign mem-in a b))
 
-(defmatch swap
+#_(defmatch swap
   (as1 <- (matches/lv-read-assign mem1 t a))
   (as2 <- (matches/lv-read-assign mem2 a b))
   (as3 <- (matches/lv-read-assign mem3 b t))
@@ -28,17 +28,17 @@
 ;; Distance in 2D
 ;; ---------
 
-(defmatch distance-2d
+#_(defmatch distance-2d
   (dx <- (generic/binop :- x1 x2))
   (dy <- (generic/binop :- y1 y2))
   (distance <- (concept/sqrt (generic/binop :+ (generic/binop :* dx dx) (generic/binop :* dy dy)))))
 
-;; (defmatch serve-input-or-3000
-;;   (fcall-serve <- (concept/fcall-name _ "serve" (generic/fargs x-or-y (generic/nothing))))
-;;   (x-or-y <- (concept/x-or-y-value input default-port))
-;;   (default-port <- (generic/const 3000))
-;;   (input <- (generic/val fcall-input))
-;;   (lang <- (concept/fcall-name _ "input" _)))
+(defmatch serve-input-or-3000
+  (fcall-serve <- (concept/fcall-name _ "serve" (generic/fargs x-or-y (generic/nothing))))
+  (x-or-y <- (concept/x-or-y-value input default-port))
+  (default-port <- (generic/const 3000))
+  (input <- (generic/val fcall-input))
+  (lang <- (concept/fcall-name _ "input" _)))
 
 ;; (defmatch factorial
 ;;   (factorial <- (generic/final factorial-loop depth))

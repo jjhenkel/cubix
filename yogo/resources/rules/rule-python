@@ -5,3 +5,14 @@
   (generic/assign mem-in (python/lhs lvalue1 lvalue2) rvalue)
   =>
   (generic/assign (generic/mem (generic/assign mem-in lvalue2 rvalue)) lvalue1 rvalue))
+
+(defrule fn-pure
+  (mem-out <- (generic/mem (concept/fcall-name mem-in name _)))
+  =>
+  (if (#{} name) mem-in mem-out))
+
+(defrule fn-readonly
+  (q-after <- (engine/q (generic/mem (concept/fcall-name mem-in name _)) lvalue))
+  (q-before <- (engine/q mem-in lvalue))
+  =>
+  (if (#{"input"} name) q-before q-after))

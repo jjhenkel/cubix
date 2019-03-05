@@ -32,23 +32,23 @@
 ;; Cond
 ;; -----
 
-;; (defrule cond-q
-;;   "Q(cond(p, mem-t, mem-f), id) = cond(p, Q(mem-t, id), Q(mem-f, id))"
-;;   (q <- (engine/q (generic/cond p mem-t mem-f) id))
-;;   =>
-;;   (generic/cond p (engine/q mem-t id) (engine/q mem-f id)))
+(defrule cond-q
+  "Q(cond(p, mem-t, mem-f), id) = cond(p, Q(mem-t, id), Q(mem-f, id))"
+  (q <- (engine/q (generic/cond p mem-t mem-f) id))
+  =>
+  (generic/cond p (engine/q mem-t id) (engine/q mem-f id)))
 
-;; (defrule cond-negate
-;;   "cond(not(p), t, f) == cond(p, f, t)"
-;;   (generic/cond (generic/unop :not p) t f)
-;;   =>
-;;   (generic/cond p f t))
+(defrule cond-negate
+  "cond(not(p), t, f) == cond(p, f, t)"
+  (generic/cond (generic/unop :not p) t f)
+  =>
+  (generic/cond p f t))
 
-;; (defrule cond-eq
-;;   "cond(p, x, x) = x"
-;;   (generic/cond _ x x)
-;;   =>
-;;   x)
+(defrule cond-eq
+  "cond(p, x, x) = x"
+  (generic/cond _ x x)
+  =>
+  x)
 
 ;; ;; ----------
 ;; ;; Loops
@@ -122,11 +122,11 @@
   =>
   (concept/sqrt x))
 
-;; (defrule x-or-y-value
-;;   "cond(x, x, y) = x-or-y-value(x, y)"
-;;   (generic/cond x x y)
-;;   =>
-;;   (concept/x-or-y-value x y))
+(defrule x-or-y-value
+  "cond(x, x, y) = x-or-y-value(x, y)"
+  (generic/cond x x y)
+  =>
+  (concept/x-or-y-value x y))
 
 ;; (defrule loop-init-to-excl-n-by-k
 ;;   "depth(n) < depth-loop, depth(k) < depth-loop, then loop-i(init, loop-i < n, loop-i + k,
