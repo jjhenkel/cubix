@@ -107,14 +107,20 @@ data FunctionCallF e t where
 data FunctionArgsF e t where
   FunctionArgsF :: e ValueT -> e [FArgT] -> FunctionArgsF e [FArgT]
 
-type YGenericSig = FunctionArgsF :+: FunctionCallF :+: AssignF :+: UnOpF :+: BinOpF :+: SelF :+: IdentF :+: ConstF :+: NothingF :+: UnknownF :+: ValF :+: MemF :+: MemGenesisF :+: AnyHeap :+: AnyStack :+: CommonOp :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
+data CondF e t where
+  CondF :: e ValueT -> e t -> e t -> CondF e t
+
+data CondMemF e t where
+  CondMemF :: e ValueT -> e MemoryT -> e MemoryT -> CondMemF e MemoryT
+
+type YGenericSig = CondMemF :+: CondF :+: FunctionArgsF :+: FunctionCallF :+: AssignF :+: UnOpF :+: BinOpF :+: SelF :+: IdentF :+: ConstF :+: NothingF :+: UnknownF :+: ValF :+: MemF :+: MemGenesisF :+: AnyHeap :+: AnyStack :+: CommonOp :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
 
 newtype Name = Name [Char] deriving (Eq, Show, Ord)
 newtype Occurrence = Occurrence [Label] deriving (Eq, Show)
 
 data ID (f :: (* -> *) -> * -> *) t where
   ID :: Int -> ID f t
-  IDs :: [(ID f t, Label)] -> ID f [t]
+  IDs :: [(Label, ID f t)] -> ID f [t]
   Statement :: ID f StatementT
   Scope :: ID f ScopeT
 
@@ -123,7 +129,7 @@ instance Show (ID f t) where
   show (IDs ids) = "[IDS " ++ (intercalate " " $ map show ids) ++ "]"
   show Scope = "Scope"
 
-fromIds :: ID f [t] -> [(ID f t, Label)]
+fromIds :: ID f [t] -> [(Label, ID f t)]
 fromIds (IDs ids) = ids
 fromIds t = error $ "ID is not a list: " ++ show t
 
@@ -186,8 +192,14 @@ iQ labels lvalue = getMem >>= (insertNode labels) . (Q lvalue)
 getMem :: (MonadYogo f m) => m (ID f MemoryT)
 getMem = liftM head $ use memScope
 
+pushMem :: (MonadYogo f m) => ID f MemoryT -> m (ID f MemoryT)
+pushMem mem = memScope %= (mem :) >> return mem
+
+popMem :: (MonadYogo f m) => m (ID f MemoryT)
+popMem = getMem >>= \mem -> memScope %= tail >> return mem
+
 updateMem :: (MonadYogo f m) => ID f MemoryT -> m (ID f MemoryT)
-updateMem mid = memScope %= (mid :) . tail >> return mid
+updateMem mem = popMem >> pushMem mem
 
 updateMemVal :: (MonadYogo f m, MemF :<: f) => ID f MemValT -> m (ID f MemValT)
 updateMemVal memVal = iMemF [] memVal >> return memVal
@@ -209,15 +221,25 @@ instance {-# OVERLAPPABLE #-} (CanYTrans f) => YTrans f g y t where
 instance {-# OVERLAPPING #-} (YTrans f1 g y t, YTrans f2 g y t) => YTrans (f1 :+: f2) g y t where
   ytrans = caseH' ytrans ytrans
 
+getLabel :: TermLab f t -> Label
+getLabel (Term (_ :&: l)) = l
+
+unrollPairF :: (Cx.PairF :<: g) => TermLab g (i, j) -> (Label, (TermLab g i, TermLab g j))
+unrollPairF t@(project' -> Just (Cx.PairF i j)) = (getLabel t, (i, j))
+unrollPairF _ = error "Cannot unroll PairF"
+
+unrollListF :: (Cx.ListF :<: g) => TermLab g [t] -> [(Label, TermLab g t)]
+unrollListF t@(project' -> Just (Cx.NilF)) = []
+unrollListF t@(project' -> Just (Cx.ConsF x xs)) = (getLabel t, x) : unrollListF xs
+
 -- Not every kinds of ListF needs to become a list in Yogo graph, therefore just
 -- return ID f [t] for the caller to decide what to do with it.
-instance (YTrans g g y t, YTrans g g y [t]) => YTrans Cx.ListF g y [t] where
-  ytrans (Cx.NilF :&: l) = return $ IDs []
-  ytrans ((Cx.ConsF x xs) :&: l) = do
-    -- Not sure why we need to annotate type here
-    id :: ID y t <- ytranslate x
-    (IDs ids) :: ID y [t] <- ytranslate xs
-    return $ IDs ((id, l) : ids)
+instance (Cx.ListF :<: g, YTrans g g y t) => YTrans Cx.ListF g y [t] where
+  ytrans (Cx.NilF :&: _) = return $ IDs []
+  ytrans t@(Cx.ConsF _ _ :&: _) =
+    -- Unroll the ListF into a normal list and translate each element
+    let elems = unrollListF $ inject' t in
+      traverse (traverse ytranslate) elems >>= return . IDs
 
 instance (Cx.Ident :<: g, IdentF :<: y) => YTrans Cx.Ident g y AddressT where
   ytrans (Cx.Ident name :&: l) = insertNode [l] (IdentF name)
@@ -229,7 +251,8 @@ instance (Cx.Assign :<: g, Cx.AssignOpEquals :<: g, AssignF :<: y, MemF :<: y, Y
 
 instance (Cx.FunctionCall :<: g, FunctionCallF :<: y, MemF :<: y, YTrans g g y ValueT, YTrans g g y [FArgT]) => YTrans Cx.FunctionCall g y MemValT where
   -- Assumes to be :=
-  ytrans (Cx.FunctionCall _ fn fargs :&: l) = FunctionCallF <$> ytranslate fn <*> ytranslate fargs <*> getMem >>= insertNode [l] >>= updateMemVal
+  ytrans (Cx.FunctionCall _ fn fargs :&: l) =
+    FunctionCallF <$> ytranslate fn <*> ytranslate fargs <*> getMem >>= insertNode [l] >>= updateMemVal
 
 instance (Cx.FunctionArgumentList :<: g, FunctionArgsF :<: y, NothingF :<: y, YTrans g g y [ValueT]) => YTrans Cx.FunctionArgumentList g y [FArgT] where
   ytrans (Cx.FunctionArgumentList t :&: l) = do
@@ -237,7 +260,7 @@ instance (Cx.FunctionArgumentList :<: g, FunctionArgsF :<: y, NothingF :<: y, YT
     go (fromIds fargs)
       where
         go [] = insertNode [] NothingF
-        go ((id, l') : xs) = go xs >>= (insertNode [l, l']) . (FunctionArgsF id)
+        go ((l', id) : xs) = go xs >>= (insertNode [l, l']) . (FunctionArgsF id)
 
 instance (Cx.PositionalArgument :<: g, YTrans g g y ValueT) => YTrans Cx.PositionalArgument g y ValueT where
   ytrans (Cx.PositionalArgument t :&: _) = ytranslate t

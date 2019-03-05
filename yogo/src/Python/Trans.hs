@@ -8,6 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Python.Trans (
   YPythonSig
@@ -31,7 +32,7 @@ import qualified Data.Map as Map
 import Data.Maybe ( fromJust )
 
 import Cubix.Language.Info
-import qualified Cubix.Language.Parametric.Syntax as C
+import qualified Cubix.Language.Parametric.Syntax as Cx
 import qualified Cubix.Language.Python.Parametric.Common as Py
 
 import Common.Trans
@@ -74,8 +75,41 @@ instance YTrans Py.Expr Py.MPythonSig YPythonSig ValueT where
   ytrans (Py.Paren expr _ :&: _) = ytranslate expr
   ytrans f = error "Py.expr Not Implemented"
 
+-- ytransConditional :: [(Label, TermLab g (Py.ExprL, [Py.StatementL]))] -> TermLab g [Py.StatementL] -> m (PyID MemoryT)
+-- ytransConditional = undefined
+-- ytransConditional ((l, (cond, body)) : condGuards) condElse = do
+--   cond <- ytranslate cond
+--   memBefore <- pushMem >>= pushMem
+--   _ :: PyID [StatementT] <- ytranslate body
+--   memTrue <- popMem
+--   memFalse <- ytransConditional condGuards condElse
+--   memCond <- insertNode [l] (CondMemF cond memTrue memFalse)
+--   updateMem memCond
+
+ytransConditional :: (YTrans Py.MPythonSig Py.MPythonSig YPythonSig [StatementT], MonadYogoPy m)
+                  => Label
+                  -> TermLab Py.MPythonSig [(Py.ExprL, [Py.StatementL])]
+                  -> TermLab Py.MPythonSig [Py.StatementL]
+                  -> m (PyID MemoryT)
+ytransConditional condLabel (project' -> Just (Cx.NilF)) condElse = do
+  _ :: PyID [StatementT] <- ytranslate condElse
+  getMem
+ytransConditional condLabel t@(project' -> Just (Cx.ConsF guard xs)) condElse =
+  case project' guard of
+    Just (Cx.PairF cond body) -> do
+      cond <- ytranslate cond
+      memBefore <- getMem >>= pushMem
+      _ :: PyID [StatementT] <- ytranslate body
+      memTrue <- popMem
+      memFalse <- ytransConditional condLabel xs condElse
+      memCond <- insertNode [condLabel, getLabel t] (CondMemF cond memTrue memFalse)
+      updateMem memCond
+    Nothing -> error "Unexpected error in ytransConditional"
+
 instance YTrans Py.Statement Py.MPythonSig YPythonSig StatementT where
   ytrans (Py.StmtExpr expr _ :&: _) = ytranslate expr >>= \(_ :: PyID ValueT) -> return Statement
+  ytrans (Py.Conditional condGuards condElse _ :&: l) =
+    ytransConditional l condGuards condElse >> return Statement
   ytrans f = error "Py.Statement Not Implemented"
 
 instance YTrans Py.Module Py.MPythonSig YPythonSig ScopeT where
@@ -95,8 +129,8 @@ instance YTrans Py.PyLhs Py.MPythonSig YPythonSig AddressT where
       where
         -- As an optimization, PyLhs (ConsF lv NilF) => lv. This is so that most assignments will bypass PyLhs altogether.
         go [] = error "Not expecting empty PyLhs"
-        go [(id, l')] = return id
-        go ((id, l') : xs) = go xs >>= (insertNode [l, l']) . (PyLhs id)
+        go [(l', id)] = return id
+        go ((l', id) : xs) = go xs >>= (insertNode [l, l']) . (PyLhs id)
 
 instance YTrans Py.IdentIsIdent Py.MPythonSig YPythonSig AddressT where
   ytrans (Py.IdentIsIdent t :&: _) = ytranslate t

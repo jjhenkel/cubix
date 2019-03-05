@@ -115,6 +115,8 @@ instance SigToLangDSL UnOpF where nodeDef _ = Just (nsCommon, "unop", ["$op", "a
 instance SigToLangDSL AssignF where nodeDef _ = Just (nsCommon, "assign", ["mem", "lvalue", "rvalue"], [])
 instance SigToLangDSL FunctionCallF where nodeDef _ = Just (nsCommon, "fcall", ["mem", "f", "args"], [])
 instance SigToLangDSL FunctionArgsF where nodeDef _ = Just (nsCommon, "fargs", ["arg", "args"], [])
+instance SigToLangDSL CondF where nodeDef _ = Just (nsCommon, "cond", ["p", "t", "f"], [])
+instance SigToLangDSL CondMemF where nodeDef _ = Just (nsCommon, "cond-mem", ["p", "t", "f"], [anyMem, qualifiedNodeType (Proxy :: Proxy CondF)])
 
 ----
 
@@ -188,6 +190,12 @@ instance (FunctionCallF :<: y) => NodeToGraphDSL FunctionCallF y where
 
 instance (FunctionArgsF :<: y) => NodeToGraphDSL FunctionArgsF y where
   nodeArgs (FunctionArgsF arg args) = [idToDSL arg, idToDSL args]
+
+instance (CondF :<: y) => NodeToGraphDSL CondF y where
+  nodeArgs (CondF p t f) = [idToDSL p, idToDSL t, idToDSL f]
+
+instance (CondMemF :<: y) => NodeToGraphDSL CondMemF y where
+  nodeArgs (CondMemF p t f) = [idToDSL p, idToDSL t, idToDSL f]
 
 quoteStr :: String -> String
 quoteStr s = "\"" ++ s ++ "\""
