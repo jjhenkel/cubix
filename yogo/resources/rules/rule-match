@@ -28,10 +28,10 @@
 ;; Distance in 2D
 ;; ---------
 
-;; (defmatch distance-2d
-;;   (dx <- (generic/binop :- x1 x2))
-;;   (dy <- (generic/binop :- y1 y2))
-;;   (distance <- (concept/sqrt (generic/binop :+ (generic/binop :* dx dx) (generic/binop :* dy dy)))))
+(defmatch distance-2d
+  (dx <- (generic/binop :- x1 x2))
+  (dy <- (generic/binop :- y1 y2))
+  (distance <- (concept/sqrt (generic/binop :+ (generic/binop :* dx dx) (generic/binop :* dy dy)))))
 
 ;; (defmatch serve-input-or-3000
 ;;   (fcall-serve <- (concept/fcall-name _ "serve" (generic/fargs x-or-y (generic/nothing))))

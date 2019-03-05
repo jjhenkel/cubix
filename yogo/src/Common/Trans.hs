@@ -36,6 +36,7 @@ data AddressT
 data ValueT
 data MemoryT
 data MemValT
+data FArgT
 
 -- Syntax types. Do not correspond to any node
 data OpT -- Operators
@@ -45,7 +46,7 @@ data ScopeT -- functions, modules
 data Primitive = IntegerF Integer | IntF Int | BoolF Bool | StringF String
 
 data CommonOp' = And | Or | Not
-               | Exponent | Plus | Multiply
+               | Exponent | Plus | Minus | Multiply
                | LessThan | GreaterThan | Equals | GreaterThanEquals | LessThanEquals | NotEquals
 
 -- Engine nodes. Provided by Yogo
@@ -65,6 +66,18 @@ data CommonOp (e :: * -> *) t where
 data AnyStack (e :: * -> *) t
 data AnyHeap (e :: * -> *) t
 
+data MemGenesisF (e :: * -> *) t where
+  MemGenesisF :: MemGenesisF e MemoryT
+
+data MemF e t where
+  MemF :: e MemValT -> MemF e MemoryT
+
+data ValF e t where
+  ValF :: e MemValT -> ValF e ValueT
+
+data UnknownF e t where
+  UnknownF :: e MemoryT -> UnknownF e MemoryT
+
 data NothingF (e :: * -> *) t where
   NothingF :: NothingF e t
 
@@ -77,27 +90,27 @@ data IdentF (e :: * -> *) t where
 data BinOpF (e :: * -> *) t where
   BinOpF :: e OpT -> e ValueT -> e ValueT -> BinOpF e ValueT
 
+data UnOpF (e :: * -> *) t where
+  UnOpF :: e OpT -> e ValueT -> UnOpF e ValueT
+
 -- Arguments by order of execution
 data AssignF e t where
   AssignF :: e ValueT -> e AddressT -> e MemoryT -> AssignF e MemValT
 
-data MemGenesisF (e :: * -> *) t where
-  MemGenesisF :: MemGenesisF e MemoryT
+data FunctionCallF e t where
+  FunctionCallF :: e ValueT -> e [FArgT] -> e MemoryT -> FunctionCallF e MemValT
 
-data MemF e t where
-  MemF :: e MemValT -> MemF e MemoryT
+data FunctionArgsF e t where
+  FunctionArgsF :: e ValueT -> e [FArgT] -> FunctionArgsF e [FArgT]
 
-data UnknownF e t where
-  UnknownF :: e MemoryT -> UnknownF e MemoryT
-
-type YGenericSig = UnknownF :+: MemF :+: MemGenesisF :+: AssignF :+: BinOpF :+: IdentF :+: ConstF :+: NothingF :+: AnyHeap :+: AnyStack :+: CommonOp :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
+type YGenericSig = FunctionArgsF :+: FunctionCallF :+: AssignF :+: UnOpF :+: BinOpF :+: IdentF :+: ConstF :+: NothingF :+: UnknownF :+: ValF :+: MemF :+: MemGenesisF :+: AnyHeap :+: AnyStack :+: CommonOp :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
 
 newtype Name = Name [Char] deriving (Eq, Show, Ord)
 newtype Occurrence = Occurrence [Label] deriving (Eq, Show)
 
 data ID (f :: (* -> *) -> * -> *) t where
   ID :: Int -> ID f t
-  IDs :: [(ID f t, Occurrence)] -> ID f [t]
+  IDs :: [(ID f t, Label)] -> ID f [t]
   Statement :: ID f StatementT
   Scope :: ID f ScopeT
 
@@ -106,7 +119,7 @@ instance Show (ID f t) where
   show (IDs ids) = "[IDS " ++ (intercalate " " $ map show ids) ++ "]"
   show Scope = "Scope"
 
-fromIds :: ID f [t] -> [(ID f t, Occurrence)]
+fromIds :: ID f [t] -> [(ID f t, Label)]
 fromIds (IDs ids) = ids
 fromIds t = error $ "ID is not a list: " ++ show t
 
@@ -197,12 +210,30 @@ instance {-# OVERLAPPING #-} (YTrans f1 g y t, YTrans f2 g y t) => YTrans (f1 :+
 instance (YTrans g g y t, YTrans g g y [t]) => YTrans Cx.ListF g y [t] where
   ytrans (Cx.NilF :&: l) = return $ IDs []
   ytrans ((Cx.ConsF x xs) :&: l) = do
+    -- Not sure why we need to annotate type here
     id :: ID y t <- ytranslate x
     (IDs ids) :: ID y [t] <- ytranslate xs
-    return $ IDs ((id, Occurrence [l]) : ids)
+    return $ IDs ((id, l) : ids)
 
 instance (Cx.Ident :<: g, IdentF :<: y) => YTrans Cx.Ident g y AddressT where
   ytrans (Cx.Ident name :&: l) = insertNode [l] (IdentF name)
 
 instance (Cx.Assign :<: g, AssignF :<: y, MemF :<: y, YTrans g g y AddressT, YTrans g g y ValueT) => YTrans Cx.Assign g y MemValT where
-  ytrans (Cx.Assign lv _ rv :&: l) = AssignF <$> ytranslate rv <*> ytranslate lv <*> getMem >>= insertNode [l] >>= updateMemVal
+  -- Assumes to be :=
+  ytrans (Cx.Assign lv _ rv :&: l) =
+    AssignF <$> ytranslate rv <*> ytranslate lv <*> getMem >>= insertNode [l] >>= updateMemVal
+
+instance (Cx.FunctionCall :<: g, FunctionCallF :<: y, MemF :<: y, YTrans g g y ValueT, YTrans g g y [FArgT]) => YTrans Cx.FunctionCall g y MemValT where
+  -- Assumes to be :=
+  ytrans (Cx.FunctionCall _ fn fargs :&: l) = FunctionCallF <$> ytranslate fn <*> ytranslate fargs <*> getMem >>= insertNode [l] >>= updateMemVal
+
+instance (Cx.FunctionArgumentList :<: g, FunctionArgsF :<: y, NothingF :<: y, YTrans g g y [ValueT]) => YTrans Cx.FunctionArgumentList g y [FArgT] where
+  ytrans (Cx.FunctionArgumentList t :&: l) = do
+    fargs <- ytranslate t
+    go (fromIds fargs)
+      where
+        go [] = insertNode [] NothingF
+        go ((id, l') : xs) = go xs >>= (insertNode [l, l']) . (FunctionArgsF id)
+
+instance (Cx.PositionalArgument :<: g, YTrans g g y ValueT) => YTrans Cx.PositionalArgument g y ValueT where
+  ytrans (Cx.PositionalArgument t :&: _) = ytranslate t

@@ -1,7 +1,4 @@
-a = 1
-b = 2
-c = a
-a = b
-b = c
-e = a
-d = b
+dx = (x1 - x2)
+dy = (y1 - y2)
+distanceSq = dx * dx + dy * dy
+distance = sqrt(distanceSq)

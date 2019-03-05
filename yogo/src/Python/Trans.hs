@@ -53,6 +53,7 @@ instance YTrans Py.Op Py.MPythonSig YPythonSig OpT where
   ytrans (Py.Not _ :&: l) = insertNode [l] (CommonOp Not)
   ytrans (Py.Exponent _ :&: l) = insertNode [l] (CommonOp Exponent)
   ytrans (Py.Plus _ :&: l) = insertNode [l] (CommonOp Plus)
+  ytrans (Py.Minus _ :&: l) = insertNode [l] (CommonOp Minus)
   ytrans (Py.Multiply _ :&: l) = insertNode [l] (CommonOp Multiply)
   ytrans (Py.LessThan _ :&: l) = insertNode [l] (CommonOp LessThan)
   ytrans (Py.LessThanEquals _ :&: l) = insertNode [l] (CommonOp LessThanEquals)
@@ -66,6 +67,9 @@ instance YTrans Py.Expr Py.MPythonSig YPythonSig ValueT where
   ytrans (Py.Var ident _ :&: l) = ytranslate ident >>= iQ [l]
   ytrans (Py.BinaryOp op arg1 arg2 _ :&: l) =
     BinOpF <$> ytranslate op <*> ytranslate arg1 <*> ytranslate arg2 >>= insertNode [l]
+  ytrans (Py.UnaryOp op arg _ :&: l) =
+    UnOpF <$> ytranslate op <*> ytranslate arg >>= insertNode [l]
+  ytrans (Py.Paren expr _ :&: _) = ytranslate expr
   ytrans f = error "Py.expr Not Implemented"
 
 instance YTrans Py.Statement Py.MPythonSig YPythonSig StatementT where
@@ -85,8 +89,8 @@ instance YTrans Py.PyLhs Py.MPythonSig YPythonSig AddressT where
       where
         -- As an optimization, PyLhs (ConsF lv NilF) => lv. This is so that most assignments will bypass PyLhs altogether.
         go [] = error "Not expecting empty PyLhs"
-        go [(id, occurrence)] = return id
-        go ((id, occurrence) : xs) = go xs >>= (insertNode' occurrence) . (PyLhs id)
+        go [(id, l')] = return id
+        go ((id, l') : xs) = go xs >>= (insertNode [l, l']) . (PyLhs id)
 
 instance YTrans Py.IdentIsIdent Py.MPythonSig YPythonSig AddressT where
   ytrans (Py.IdentIsIdent t :&: _) = ytranslate t
@@ -96,6 +100,15 @@ instance YTrans Py.IdentIsPyLValue Py.MPythonSig YPythonSig AddressT where
 
 instance YTrans Py.ExprIsRhs Py.MPythonSig YPythonSig ValueT where
   ytrans (Py.ExprIsRhs t :&: _) = ytranslate t
+
+instance YTrans Py.ExprIsPositionalArgExp Py.MPythonSig YPythonSig ValueT where
+  ytrans (Py.ExprIsPositionalArgExp t :&: _) = ytranslate t
+
+instance YTrans Py.ExprIsFunctionExp Py.MPythonSig YPythonSig ValueT where
+  ytrans (Py.ExprIsFunctionExp t :&: _) = ytranslate t
+
+instance YTrans Py.FunctionCallIsExpr Py.MPythonSig YPythonSig ValueT where
+  ytrans (Py.FunctionCallIsExpr t :&: l) = ytranslate t >>= (insertNode [l]) . ValF
 
 instance YTrans Py.AssignIsStatement Py.MPythonSig YPythonSig StatementT where
   ytrans (Py.AssignIsStatement t :&: _) = ytranslate t >>= \(_ :: PyID MemValT) -> return Statement

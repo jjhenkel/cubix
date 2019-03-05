@@ -102,14 +102,18 @@ instance SigToLangDSL CommonOp where nodeDef _ = Nothing
 
 instance SigToLangDSL AnyStack where nodeDef _ = Just (nsCommon, "any-stack-lvalue", [], [anyLValue])
 instance SigToLangDSL AnyHeap where nodeDef _ = Just (nsCommon, "any-heap-lvalue", [], [anyLValue])
+instance SigToLangDSL MemGenesisF where nodeDef _ = Just (nsCommon, "mem-genesis", [], [anyMem])
+instance SigToLangDSL UnknownF where nodeDef _ = Just (nsCommon, "unknown", ["src"], [anyMem])
+instance SigToLangDSL MemF where nodeDef _ = Just (nsCommon, "mem", ["src"], [anyMem])
+instance SigToLangDSL ValF where nodeDef _ = Just (nsCommon, "val", ["src"], [])
 instance SigToLangDSL NothingF where nodeDef _ = Just (nsCommon, "nothing", [], [])
 instance SigToLangDSL ConstF where nodeDef _ = Just (nsCommon, "const", ["$const"], [])
 instance SigToLangDSL IdentF where nodeDef _ = Just (nsCommon, "ident", ["$name"], [anyStackLValue])
 instance SigToLangDSL BinOpF where nodeDef _ = Just (nsCommon, "binop", ["$op", "arg1", "arg2"], [])
+instance SigToLangDSL UnOpF where nodeDef _ = Just (nsCommon, "unop", ["$op", "arg"], [])
 instance SigToLangDSL AssignF where nodeDef _ = Just (nsCommon, "assign", ["mem", "lvalue", "rvalue"], [])
-instance SigToLangDSL MemGenesisF where nodeDef _ = Just (nsCommon, "mem-genesis", [], [anyMem])
-instance SigToLangDSL UnknownF where nodeDef _ = Just (nsCommon, "unknown", ["src"], [anyMem])
-instance SigToLangDSL MemF where nodeDef _ = Just (nsCommon, "mem", ["src"], [anyMem])
+instance SigToLangDSL FunctionCallF where nodeDef _ = Just (nsCommon, "fcall", ["mem", "f", "args"], [])
+instance SigToLangDSL FunctionArgsF where nodeDef _ = Just (nsCommon, "fargs", ["arg", "args"], [])
 
 ----
 
@@ -145,6 +149,18 @@ instance (CommonOp :<: y) => NodeToGraphDSL CommonOp y where
   nodeArgs _ = []
   nodeForm (CommonOp op) = Left $ commonOpToDSL op
 
+instance (MemGenesisF :<: y) => NodeToGraphDSL MemGenesisF y where
+  nodeArgs _ = []
+
+instance (MemF :<: y) => NodeToGraphDSL MemF y where
+  nodeArgs (MemF src) = [idToDSL src]
+
+instance (ValF :<: y) => NodeToGraphDSL ValF y where
+  nodeArgs (ValF src) = [idToDSL src]
+
+instance (UnknownF :<: y) => NodeToGraphDSL UnknownF y where
+  nodeArgs (UnknownF mem) = [idToDSL mem]
+
 instance (NothingF :<: y) => NodeToGraphDSL NothingF y where
   nodeArgs _ = []
 
@@ -157,17 +173,17 @@ instance (IdentF :<: y) => NodeToGraphDSL IdentF y where
 instance (BinOpF :<: y) => NodeToGraphDSL BinOpF y where
   nodeArgs (BinOpF op arg1 arg2) = [idToDSL op, idToDSL arg1, idToDSL arg2]
 
+instance (UnOpF :<: y) => NodeToGraphDSL UnOpF y where
+  nodeArgs (UnOpF op arg) = [idToDSL op, idToDSL arg]
+
 instance (AssignF :<: y) => NodeToGraphDSL AssignF y where
   nodeArgs (AssignF rvalue lvalue mem) = [idToDSL mem, idToDSL lvalue, idToDSL rvalue]
 
-instance (MemGenesisF :<: y) => NodeToGraphDSL MemGenesisF y where
-  nodeArgs _ = []
+instance (FunctionCallF :<: y) => NodeToGraphDSL FunctionCallF y where
+  nodeArgs (FunctionCallF f args mem) = [idToDSL mem, idToDSL f, idToDSL args]
 
-instance (MemF :<: y) => NodeToGraphDSL MemF y where
-  nodeArgs (MemF src) = [idToDSL src]
-
-instance (UnknownF :<: y) => NodeToGraphDSL UnknownF y where
-  nodeArgs (UnknownF mem) = [idToDSL mem]
+instance (FunctionArgsF :<: y) => NodeToGraphDSL FunctionArgsF y where
+  nodeArgs (FunctionArgsF arg args) = [idToDSL arg, idToDSL args]
 
 quoteStr :: String -> String
 quoteStr s = "\"" ++ s ++ "\""
@@ -191,6 +207,7 @@ commonOpToDSL Or = ":or"
 commonOpToDSL Not = ":not"
 commonOpToDSL Exponent = ":**"
 commonOpToDSL Plus = ":+"
+commonOpToDSL Minus = ":-"
 commonOpToDSL Multiply = ":*"
 commonOpToDSL LessThan = ":<"
 commonOpToDSL GreaterThan = ":>"
