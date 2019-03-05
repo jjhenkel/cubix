@@ -1,0 +1,7 @@
+(ns python-rule)
+
+(defrule assign-pylhs
+  "Unroll complex assignment into two assignments"
+  (generic/assign mem-in (python/lhs lvalue1 lvalue2) rvalue)
+  =>
+  (generic/assign (generic/mem (generic/assign mem-in lvalue2 rvalue)) lvalue1 rvalue))

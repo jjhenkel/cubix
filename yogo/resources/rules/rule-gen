@@ -1,1 +1,165 @@
-(ns rule-gen)
+(ns gen-rules)
+
+(defrule identuneq
+  (no-root)
+  (ident <- (generic/ident _))
+  =>
+  (s/insert-ineclass ident 'ident-ineclass))
+
+;; -----
+;; Assignment
+;; -----
+
+;; (defrule assignment-r-v
+;;   (generic/val (generic/assign _ _ rvalue))
+;;   =>
+;;   rvalue)
+
+(defrule assignment-v-q
+  (engine/q
+   (generic/mem (generic/assign _ lvalue rvalue))
+   lvalue)
+  =>
+  rvalue)
+
+(defrule assignment-qs
+  (engine/q (mem <- (generic/mem (generic/assign mem-in lvalue1 _))) lvalue2)
+  (un-eq lvalue1 lvalue2)
+  =>
+  (engine/q mem-in lvalue2))
+
+;; -----
+;; Cond
+;; -----
+
+;; (defrule cond-q
+;;   "Q(cond(p, mem-t, mem-f), id) = cond(p, Q(mem-t, id), Q(mem-f, id))"
+;;   (q <- (engine/q (generic/cond p mem-t mem-f) id))
+;;   =>
+;;   (generic/cond p (engine/q mem-t id) (engine/q mem-f id)))
+
+;; (defrule cond-negate
+;;   "cond(not(p), t, f) == cond(p, f, t)"
+;;   (generic/cond (generic/unop :not p) t f)
+;;   =>
+;;   (generic/cond p f t))
+
+;; (defrule cond-eq
+;;   "cond(p, x, x) = x"
+;;   (generic/cond _ x x)
+;;   =>
+;;   x)
+
+;; ;; ----------
+;; ;; Loops
+;; ;; ----------
+
+;; (defrule make-final
+;;   "Q(final(loop, depth), lvalue) = final(Q(loop, lvalue), depth)"
+;;   (engine/q (generic/final loop depth) lvalue)
+;;   =>
+;;   (generic/final (engine/q loop lvalue) depth))
+
+;; ;; TODO depth(x, depth-x), (depth-x < depth-final) => Q(x, depth-final) = x
+
+;; (defrule join-qs-loop
+;;   (q-loop <- (engine/q (generic/loop-mem init _ next _) lvalue))
+;;   (q-loop <- (engine/q next lvalue))
+;;   =>
+;;   (engine/q init lvalue))
+
+;; (defrule join-qs-final
+;;   (q-loop <- (engine/q (loop <- (generic/loop-mem init _ _ depth) lvalue)))
+;;   (q-loop <- (engine/q init lvalue))
+;;   =>
+;;   (engine/q (generic/final-mem loop depth) lvalue))
+
+;; ;; ----------
+;; ;; Boolean
+;; ;; ----------
+
+;; (defrule double-negation
+;;   "not(not(p)) == p"
+;;   (generic/unop :not (generic/unop :not p))
+;;   =>
+;;   p)
+
+;; ;; -----
+;; ;; Arithmetics
+;; ;; -----
+
+;; (defrule addition-commutative
+;;   "(+ a b) = (+ b a)"
+;;   (generic/binop :+ a b)
+;;   =>
+;;   (generic/binop :+ b a))
+
+;; (defrule multiplication-commutative
+;;   "(* a b) = (* b a)"
+;;   (generic/binop :* a b)
+;;   =>
+;;   (generic/binop :* b a))
+
+;; (defrule mult-add-distributive
+;;   "a * (b + c) = (a * b) + (a * c)"
+;;   (generic/binop :* a (generic/binop :+ b c))
+;;   =>
+;;   (generic/binop :+
+;;                   (generic/binop :* a b)
+;;                   (generic/binop :* a c)))
+
+;; ;; ;; -----
+;; ;; ;; Concepts
+;; ;; ;; -----
+
+;; (defrule fcall-name
+;;   (generic/fcall mem (engine/q _ (generic/ident name)) fargs)
+;;   =>
+;;   (concept/fcall-name mem name fargs))
+
+;; (defrule sqrt
+;;   (concept/fcall-name _ "sqrt" (generic/fargs x (generic/nothing)))
+;;   =>
+;;   (concept/sqrt x))
+
+;; (defrule x-or-y-value
+;;   "cond(x, x, y) = x-or-y-value(x, y)"
+;;   (generic/cond x x y)
+;;   =>
+;;   (concept/x-or-y-value x y))
+
+;; (defrule loop-init-to-excl-n-by-k
+;;   "depth(n) < depth-loop, depth(k) < depth-loop, then loop-i(init, loop-i < n, loop-i + k,
+;;   depth-loop) = iter(range(init, n, k), depth-loop)"
+;;   (i <- (generic/loop init (generic/binop :< i n) (generic/binop :+ i k) depth))
+;;   (invariant n depth)
+;;   (invariant k depth)
+;;   =>
+;;   (generic/iter (concept/range init n k) depth))
+
+;; (defrule map-membership-1
+;;   "get(m, k) == null"
+;;   (generic/binop :== (concept/get m k) (generic/nothing))
+;;   =>
+;;   (generic/unop :not (concept/map-membership m k)))
+
+;; (defrule len-obj-size
+;;   "val(fcall-name(mem, 'len', [m])) == size(Q(mem, at(m)))"
+;;   (generic/val (concept/fcall-name mem "len" (generic/fargs m (generic/nothing))))
+;;   =>
+;;   (concept/size (engine/q mem (generic/at m))))
+
+;; (defrule m-get
+;;   "Q(mem, sel(m, k)) = get(Q(mem, at(m)), k)"
+;;   ;; Once m is defined, it's at-Q always returns a object.
+;;   (engine/q mem (generic/sel m k))
+;;   =>
+;;   (concept/get (engine/q mem (generic/at m)) k))
+
+;; ;; TODO m1, me heap compatible
+;; (defrule arr-iter
+;;   "get(arr, iter(range(0, size(arr), 1))) = iter(arr)"
+;;   (concept/get arr (generic/iter (concept/range (generic/const 0) (concept/size arr) (generic/const 1)) depth))
+;;   ;; TODO (invariant arr depth)?
+;;   =>
+;;   (generic/iter arr depth))

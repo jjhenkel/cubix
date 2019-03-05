@@ -16,7 +16,7 @@ import Python.Trans
 nsPy :: Namespace
 nsPy = "python"
 
-instance SigToLangDSL PyLhs where nodeDef _ = (nsPy, "lhs", ["lv1", "lv2"], [anyLValue])
+instance SigToLangDSL PyLhs where nodeDef _ = Just (nsPy, "lhs", ["lv1", "lv2"], [anyLValue])
 
 instance (PyLhs :<: y) => NodeToGraphDSL PyLhs y where
   nodeArgs (PyLhs id1 id2) = [idToDSL id1, idToDSL id2]

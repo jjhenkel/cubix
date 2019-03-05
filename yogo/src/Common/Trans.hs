@@ -26,7 +26,6 @@ import Data.Comp.Multi.Strategic
 import Data.List ( intercalate )
 import Data.Map ( Map )
 import qualified Data.Map as Map
-import Data.Maybe ( fromJust )
 
 import Cubix.Language.Info
 import qualified Cubix.Language.Parametric.Syntax as Cx
@@ -38,11 +37,16 @@ data ValueT
 data MemoryT
 data MemValT
 
--- Syntax types, can't be used as node arguments
+-- Syntax types. Do not correspond to any node
+data OpT -- Operators
 data StatementT
 data ScopeT -- functions, modules
 
 data Primitive = IntegerF Integer | IntF Int | BoolF Bool | StringF String
+
+data CommonOp' = And | Or | Not
+               | Exponent | Plus | Multiply
+               | LessThan | GreaterThan | Equals | GreaterThanEquals | LessThanEquals | NotEquals
 
 -- Engine nodes. Provided by Yogo
 data AnyNode (e :: * -> *) t
@@ -51,6 +55,11 @@ data AnyMem (e :: * -> *) t
 
 data Q (e :: * -> *) t where
   Q :: e AddressT -> e MemoryT -> Q e ValueT
+
+-- Non-nodes
+
+data CommonOp (e :: * -> *) t where
+  CommonOp :: CommonOp' -> CommonOp e OpT
 
 -- Generic nodes
 data AnyStack (e :: * -> *) t
@@ -65,6 +74,9 @@ data ConstF (e :: * -> *) t where
 data IdentF (e :: * -> *) t where
   IdentF :: String -> IdentF e AddressT
 
+data BinOpF (e :: * -> *) t where
+  BinOpF :: e OpT -> e ValueT -> e ValueT -> BinOpF e ValueT
+
 -- Arguments by order of execution
 data AssignF e t where
   AssignF :: e ValueT -> e AddressT -> e MemoryT -> AssignF e MemValT
@@ -78,7 +90,7 @@ data MemF e t where
 data UnknownF e t where
   UnknownF :: e MemoryT -> UnknownF e MemoryT
 
-type YGenericSig = UnknownF :+: MemF :+: MemGenesisF :+: AssignF :+: IdentF :+: ConstF :+: NothingF :+: AnyHeap :+: AnyStack :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
+type YGenericSig = UnknownF :+: MemF :+: MemGenesisF :+: AssignF :+: BinOpF :+: IdentF :+: ConstF :+: NothingF :+: AnyHeap :+: AnyStack :+: CommonOp :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
 
 newtype Name = Name [Char] deriving (Eq, Show, Ord)
 newtype Occurrence = Occurrence [Label] deriving (Eq, Show)

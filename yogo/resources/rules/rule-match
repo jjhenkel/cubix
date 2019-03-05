@@ -1,0 +1,69 @@
+(ns matches)
+;; -----------
+;;  Swap
+;; -----------
+
+(defnode lv-read-assign [mem l1 l2])
+
+(defrule lv-read-assignment
+  (as <- (generic/assign mem-in a (engine/q mem-in b)))
+  =>
+  (matches/lv-read-assign mem-in a b))
+
+(defmatch swap
+  (as1 <- (matches/lv-read-assign mem1 t a))
+  (as2 <- (matches/lv-read-assign mem2 a b))
+  (as3 <- (matches/lv-read-assign mem3 b t))
+
+  (qt <- (engine/q (generic/mem as1) t))
+  (qt <- (engine/q (generic/mem as3) t))
+
+  (qb <- (engine/q (generic/mem as1) b))
+  (qb <- (engine/q (generic/mem as2) b))
+
+  (qa <- (engine/q (generic/mem as2) a))
+  (qa <- (engine/q (generic/mem as3) a)))
+
+;; ---------
+;; Distance in 2D
+;; ---------
+
+;; (defmatch distance-2d
+;;   (dx <- (generic/binop :- x1 x2))
+;;   (dy <- (generic/binop :- y1 y2))
+;;   (distance <- (concept/sqrt (generic/binop :+ (generic/binop :* dx dx) (generic/binop :* dy dy)))))
+
+;; (defmatch serve-input-or-3000
+;;   (fcall-serve <- (concept/fcall-name _ "serve" (generic/fargs x-or-y (generic/nothing))))
+;;   (x-or-y <- (concept/x-or-y-value input default-port))
+;;   (default-port <- (generic/const 3000))
+;;   (input <- (generic/val fcall-input))
+;;   (lang <- (concept/fcall-name _ "input" _)))
+
+;; (defmatch factorial
+;;   (factorial <- (generic/final factorial-loop depth))
+;;   (factorial-loop <- (generic/loop c1 _ (generic/binop :* factorial-loop iter-range) depth))
+;;   (iter-range <- (generic/iter (concept/range c1 n c1) depth))
+;;   (c1 <- (generic/const 1)))
+
+;; (defmatch map-set-default
+;;   (map-final <- (generic/cond map-mem map-before map-after))
+;;   (map-mem <- (concept/map-membership map-before k))
+;;   (as <- (generic/assign mem-in (generic/sel m k) default))
+;;   (map-before <- (engine/q mem-in at-m))
+;;   (map-after <- (engine/q (generic/mem as) at-m))
+;;   (at-m <- (generic/at m)))
+
+;; ;; ------------
+;; ;; Element count
+;; ;; ------------
+
+;; (defmatch seq-element-count
+;;   "final(loop(0, ?, cond(iter(seq) == k, loop + 1, loop)))"
+;;   (answer <- (generic/final counter _))
+;;   (counter <- (generic/loop (generic/const 0) _ next depth))
+;;   (next <- (generic/cond p inc counter))
+;;   (inc <- (generic/binop :+ counter (generic/const 1)))
+;;   (p <- (generic/binop :== e k))
+;;   (e <- (generic/iter _ _))
+;;   (invariant k depth))

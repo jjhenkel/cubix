@@ -37,6 +37,7 @@ import Data.Comp.Multi
 import Data.List
 import Data.Map ( Map )
 import qualified Data.Map as Map
+import Data.Maybe ( fromJust )
 
 import Common.Trans
 
@@ -56,21 +57,10 @@ nsEngine :: Namespace
 nsEngine = "engine"
 
 qualifiedNodeType :: (SigToLangDSL f) => Proxy f -> QualifiedNodeType
-qualifiedNodeType f = let (ns, typ, _, _) = nodeDef f in ns ++ "/" ++ typ
+qualifiedNodeType f = let (ns, typ, _, _) = fromJust (nodeDef f) in ns ++ "/" ++ typ
 
 nsOf :: (SigToLangDSL f) => Proxy f -> Namespace
-nsOf f = let (ns, _, _, _) = nodeDef f in ns
-
-class (Typeable f) => SigToLangDSL (f :: (* -> *) -> * -> *) where
-  nodeDef :: Proxy f -> NodeDef
-
-  sigToDSL :: Proxy f -> LangDefs
-  sigToDSL f = Map.singleton (nsOf f) [nodeDef f]
-
-instance (SigToLangDSL f1, SigToLangDSL f2) => SigToLangDSL (f1 :+: f2) where
-  nodeDef = undefined
-  -- Signature is defined backward
-  sigToDSL _ = Map.unionWith (++) (sigToDSL (Proxy :: Proxy f2)) (sigToDSL (Proxy :: Proxy f1))
+nsOf f = let (ns, _, _, _) = fromJust (nodeDef f) in ns
 
 anyMem :: QualifiedNodeType
 anyMem = qualifiedNodeType (Proxy :: Proxy AnyMem)
@@ -84,32 +74,50 @@ anyStackLValue = qualifiedNodeType (Proxy :: Proxy AnyStack)
 anyHeapLValue :: QualifiedNodeType
 anyHeapLValue = qualifiedNodeType (Proxy :: Proxy AnyHeap)
 
+class (Typeable f) => SigToLangDSL (f :: (* -> *) -> * -> *) where
+  nodeDef :: Proxy f -> Maybe NodeDef
+
+  sigToDSL :: Proxy f -> LangDefs
+  sigToDSL f = case nodeDef f of
+                 Just def -> Map.singleton (nsOf f) [def]
+                 Nothing -> Map.empty
+
+instance (SigToLangDSL f1, SigToLangDSL f2) => SigToLangDSL (f1 :+: f2) where
+  nodeDef _ = Nothing
+  -- Signature is defined backward
+  sigToDSL _ = Map.unionWith (++) (sigToDSL (Proxy :: Proxy f2)) (sigToDSL (Proxy :: Proxy f1))
+
 -- Engine Nodes. Not generated
 
-instance SigToLangDSL AnyNode where nodeDef _ = (nsEngine, "any-node", [], [])
-instance SigToLangDSL AnyLValue where nodeDef _ = (nsEngine, "any-lvalue", [], [])
-instance SigToLangDSL AnyMem where nodeDef _ = (nsEngine, "any-mem", [], [])
-instance SigToLangDSL Q where nodeDef _ = (nsEngine, "q", [], [])
+instance SigToLangDSL AnyNode where nodeDef _ = Just (nsEngine, "any-node", [], [])
+instance SigToLangDSL AnyLValue where nodeDef _ = Just (nsEngine, "any-lvalue", [], [])
+instance SigToLangDSL AnyMem where nodeDef _ = Just (nsEngine, "any-mem", [], [])
+instance SigToLangDSL Q where nodeDef _ = Just (nsEngine, "q", [], [])
+
+-- Non-nodes
+
+instance SigToLangDSL CommonOp where nodeDef _ = Nothing
 
 -- Generic Nodes
 
-instance SigToLangDSL AnyStack where nodeDef _ = (nsCommon, "any-stack-lvalue", [], [anyLValue])
-instance SigToLangDSL AnyHeap where nodeDef _ = (nsCommon, "any-heap-lvalue", [], [anyLValue])
-instance SigToLangDSL NothingF where nodeDef _ = (nsCommon, "nothing", [], [])
-instance SigToLangDSL ConstF where nodeDef _ = (nsCommon, "const", ["$const"], [])
-instance SigToLangDSL IdentF where nodeDef _ = (nsCommon, "ident", ["$name"], [anyStackLValue])
-instance SigToLangDSL AssignF where nodeDef _ = (nsCommon, "assign", ["mem", "lvalue", "rvalue"], [])
-instance SigToLangDSL MemGenesisF where nodeDef _ = (nsCommon, "mem-genesis", [], [anyMem])
-instance SigToLangDSL UnknownF where nodeDef _ = (nsCommon, "unknown", ["src"], [anyMem])
-instance SigToLangDSL MemF where nodeDef _ = (nsCommon, "mem", ["src"], [anyMem])
+instance SigToLangDSL AnyStack where nodeDef _ = Just (nsCommon, "any-stack-lvalue", [], [anyLValue])
+instance SigToLangDSL AnyHeap where nodeDef _ = Just (nsCommon, "any-heap-lvalue", [], [anyLValue])
+instance SigToLangDSL NothingF where nodeDef _ = Just (nsCommon, "nothing", [], [])
+instance SigToLangDSL ConstF where nodeDef _ = Just (nsCommon, "const", ["$const"], [])
+instance SigToLangDSL IdentF where nodeDef _ = Just (nsCommon, "ident", ["$name"], [anyStackLValue])
+instance SigToLangDSL BinOpF where nodeDef _ = Just (nsCommon, "binop", ["$op", "arg1", "arg2"], [])
+instance SigToLangDSL AssignF where nodeDef _ = Just (nsCommon, "assign", ["mem", "lvalue", "rvalue"], [])
+instance SigToLangDSL MemGenesisF where nodeDef _ = Just (nsCommon, "mem-genesis", [], [anyMem])
+instance SigToLangDSL UnknownF where nodeDef _ = Just (nsCommon, "unknown", ["src"], [anyMem])
+instance SigToLangDSL MemF where nodeDef _ = Just (nsCommon, "mem", ["src"], [anyMem])
 
 ----
 
 class (SigToLangDSL f) => NodeToGraphDSL f y where
   nodeArgs :: f (ID y) t -> [String]
 
-  nodeForm :: f (ID y) t -> (QualifiedNodeType, [String])
-  nodeForm f = (qualifiedNodeType (Proxy :: Proxy f), nodeArgs f)
+  nodeForm :: f (ID y) t -> Either String (QualifiedNodeType, [String])
+  nodeForm f = Right (qualifiedNodeType (Proxy :: Proxy f), nodeArgs f)
 
 instance (NodeToGraphDSL f1 y, NodeToGraphDSL f2 y) => NodeToGraphDSL (f1 :+: f2) y where
   nodeArgs = caseH nodeArgs nodeArgs
@@ -133,6 +141,10 @@ instance (AnyHeap :<: y) => NodeToGraphDSL AnyHeap y where
 instance (Q :<: y) => NodeToGraphDSL Q y where
   nodeArgs (Q lvalue mem) = [idToDSL mem, idToDSL lvalue]
 
+instance (CommonOp :<: y) => NodeToGraphDSL CommonOp y where
+  nodeArgs _ = []
+  nodeForm (CommonOp op) = Left $ commonOpToDSL op
+
 instance (NothingF :<: y) => NodeToGraphDSL NothingF y where
   nodeArgs _ = []
 
@@ -141,6 +153,9 @@ instance (ConstF :<: y) => NodeToGraphDSL ConstF y where
 
 instance (IdentF :<: y) => NodeToGraphDSL IdentF y where
   nodeArgs (IdentF name) = [quoteStr name]
+
+instance (BinOpF :<: y) => NodeToGraphDSL BinOpF y where
+  nodeArgs (BinOpF op arg1 arg2) = [idToDSL op, idToDSL arg1, idToDSL arg2]
 
 instance (AssignF :<: y) => NodeToGraphDSL AssignF y where
   nodeArgs (AssignF rvalue lvalue mem) = [idToDSL mem, idToDSL lvalue, idToDSL rvalue]
@@ -169,3 +184,17 @@ idToDSL t = error $ "id \"" ++ show t ++ "\" cannot be translated to DSL"
 
 occurrenceToDSL :: Occurrence -> String
 occurrenceToDSL (Occurrence labels) = "[" ++ (intercalate " " $ map (\l -> quoteStr $ show l) labels) ++ "]"
+
+commonOpToDSL :: CommonOp' -> String
+commonOpToDSL And = ":and"
+commonOpToDSL Or = ":or"
+commonOpToDSL Not = ":not"
+commonOpToDSL Exponent = ":**"
+commonOpToDSL Plus = ":+"
+commonOpToDSL Multiply = ":*"
+commonOpToDSL LessThan = ":<"
+commonOpToDSL GreaterThan = ":>"
+commonOpToDSL Equals = ":=="
+commonOpToDSL LessThanEquals = ":<="
+commonOpToDSL GreaterThanEquals = ":>="
+commonOpToDSL NotEquals = ":!="

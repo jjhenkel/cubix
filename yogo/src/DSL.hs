@@ -36,7 +36,8 @@ generateLangFiles proxy = Map.mapWithKey generateLangFile (sigToDSL proxy)
 generateGraphLine :: (NodeToGraphDSL f f) => YGraphEntry f -> String
 generateGraphLine (YGraphNode (E id) (E (Node node)) occurrence) =
   case nodeForm node of
-    (fn, args) -> idToDSL id ++ " (" ++ fn ++ " " ++ (intercalate " " args) ++ " " ++ occurrenceToDSL occurrence ++ ")"
+    Left form -> idToDSL id ++ " " ++ form
+    Right (fn, args) -> idToDSL id ++ " (" ++ fn ++ " " ++ (intercalate " " args) ++ " " ++ occurrenceToDSL occurrence ++ ")"
 generateGraphLine (YGraphEq (E id1) (E id2)) = undefined
 generateGraphLine (YGraphMemSuccessor id1 id2) = undefined
 
