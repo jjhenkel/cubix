@@ -15,7 +15,7 @@
   (q-after <- (engine/q (generic/mem (concept/fcall-name mem-in name _)) lvalue))
   (q-before <- (engine/q mem-in lvalue))
   =>
-  (if (#{"input"} name) q-before q-after))
+  (if (#{"input", "print"} name) q-before q-after))
 
 (defrule assignment-qs-stack-heap
   (engine/q (mem <- (generic/mem (generic/assign mem-in lvalue1 _))) lvalue2)
