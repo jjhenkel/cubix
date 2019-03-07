@@ -16,3 +16,30 @@
   (q-before <- (engine/q mem-in lvalue))
   =>
   (if (#{"input"} name) q-before q-after))
+
+(defrule assignment-qs-stack-heap
+  (engine/q (mem <- (generic/mem (generic/assign mem-in lvalue1 _))) lvalue2)
+  (lvalue1 <- (generic/any-stack-lvalue))
+  (lvalue2 <- (generic/any-heap-lvalue))
+  =>
+  (engine/q mem-in lvalue2))
+
+(defrule assignment-qs-heap-stack
+  (engine/q (mem <- (generic/mem (generic/assign mem-in lvalue1 _))) lvalue2)
+  (lvalue1 <- (generic/any-heap-lvalue))
+  (lvalue2 <- (generic/any-stack-lvalue))
+  =>
+  (engine/q mem-in lvalue2))
+
+;; Maybe make membership a memory operation?
+(defrule membership-1
+  (generic/binop :py-in k m)
+  =>
+  (concept/membership m k))
+
+(defrule membership-2
+  (generic/binop :py-not-in k m)
+  =>
+  (generic/unop
+   :not
+   (concept/membership m k)))

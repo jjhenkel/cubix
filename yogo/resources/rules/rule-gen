@@ -137,12 +137,6 @@
 ;;   =>
 ;;   (generic/iter (concept/range init n k) depth))
 
-;; (defrule map-membership-1
-;;   "get(m, k) == null"
-;;   (generic/binop :== (concept/get m k) (generic/nothing))
-;;   =>
-;;   (generic/unop :not (concept/map-membership m k)))
-
 ;; (defrule len-obj-size
 ;;   "val(fcall-name(mem, 'len', [m])) == size(Q(mem, at(m)))"
 ;;   (generic/val (concept/fcall-name mem "len" (generic/fargs m (generic/nothing))))

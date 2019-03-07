@@ -110,8 +110,10 @@ instance SigToLangDSL NothingF where nodeDef _ = Just (nsCommon, "nothing", [], 
 instance SigToLangDSL ConstF where nodeDef _ = Just (nsCommon, "const", ["$const"], [])
 instance SigToLangDSL IdentF where nodeDef _ = Just (nsCommon, "ident", ["$name"], [anyStackLValue])
 instance SigToLangDSL SelF where nodeDef _ = Just (nsCommon, "sel", ["base", "offset"], [])
-instance SigToLangDSL BinOpF where nodeDef _ = Just (nsCommon, "binop", ["$op", "arg1", "arg2"], [])
-instance SigToLangDSL UnOpF where nodeDef _ = Just (nsCommon, "unop", ["$op", "arg"], [])
+instance SigToLangDSL AtF where nodeDef _ = Just (nsCommon, "at", ["ptr"], [])
+instance SigToLangDSL DerefF where nodeDef _ = Just (nsCommon, "deref", ["mem", "ref"], [])
+instance SigToLangDSL BinopF where nodeDef _ = Just (nsCommon, "binop", ["$op", "arg1", "arg2"], [])
+instance SigToLangDSL UnopF where nodeDef _ = Just (nsCommon, "unop", ["$op", "arg"], [])
 instance SigToLangDSL AssignF where nodeDef _ = Just (nsCommon, "assign", ["mem", "lvalue", "rvalue"], [])
 instance SigToLangDSL FunctionCallF where nodeDef _ = Just (nsCommon, "fcall", ["mem", "f", "args"], [])
 instance SigToLangDSL FunctionArgsF where nodeDef _ = Just (nsCommon, "fargs", ["arg", "args"], [])
@@ -176,11 +178,17 @@ instance (IdentF :<: y) => NodeToGraphDSL IdentF y where
 instance (SelF :<: y) => NodeToGraphDSL SelF y where
   nodeArgs (SelF base offset) = [idToDSL base, idToDSL offset]
 
-instance (BinOpF :<: y) => NodeToGraphDSL BinOpF y where
-  nodeArgs (BinOpF op arg1 arg2) = [idToDSL op, idToDSL arg1, idToDSL arg2]
+instance (AtF :<: y) => NodeToGraphDSL AtF y where
+  nodeArgs (AtF ptr) = [idToDSL ptr]
 
-instance (UnOpF :<: y) => NodeToGraphDSL UnOpF y where
-  nodeArgs (UnOpF op arg) = [idToDSL op, idToDSL arg]
+instance (DerefF :<: y) => NodeToGraphDSL DerefF y where
+  nodeArgs (DerefF mem ref) = [idToDSL mem, idToDSL ref]
+
+instance (BinopF :<: y) => NodeToGraphDSL BinopF y where
+  nodeArgs (BinopF op arg1 arg2) = [idToDSL op, idToDSL arg1, idToDSL arg2]
+
+instance (UnopF :<: y) => NodeToGraphDSL UnopF y where
+  nodeArgs (UnopF op arg) = [idToDSL op, idToDSL arg]
 
 instance (AssignF :<: y) => NodeToGraphDSL AssignF y where
   nodeArgs (AssignF rvalue lvalue mem) = [idToDSL mem, idToDSL lvalue, idToDSL rvalue]

@@ -46,13 +46,12 @@
 ;;   (iter-range <- (generic/iter (concept/range c1 n c1) depth))
 ;;   (c1 <- (generic/const 1)))
 
-;; (defmatch map-set-default
-;;   (map-final <- (generic/cond map-mem map-before map-after))
-;;   (map-mem <- (concept/map-membership map-before k))
-;;   (as <- (generic/assign mem-in (generic/sel m k) default))
-;;   (map-before <- (engine/q mem-in at-m))
-;;   (map-after <- (engine/q (generic/mem as) at-m))
-;;   (at-m <- (generic/at m)))
+(defmatch map-set-default
+  (map-final <- (generic/cond map-mem map-before map-after))
+  (map-mem <- (concept/membership map-before k))
+  (as <- (generic/assign mem-in (generic/sel map-before k) default))
+  (map-before <- (engine/q mem-in m))
+  (map-after <- (engine/q (generic/mem as) m)))
 
 ;; ;; ------------
 ;; ;; Element count

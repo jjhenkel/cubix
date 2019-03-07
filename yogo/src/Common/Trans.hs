@@ -91,16 +91,26 @@ data IdentF (e :: * -> *) t where
 data SelF e t where
   SelF :: e ValueT -> e ValueT -> SelF e AddressT
 
-data BinOpF e t where
-  BinOpF :: e OpT -> e ValueT -> e ValueT -> BinOpF e ValueT
+data AtF e t where
+  AtF :: e ValueT -> AtF e AddressT
 
-data UnOpF e t where
-  UnOpF :: e OpT -> e ValueT -> UnOpF e ValueT
+-- (deref mem ref) = (q mem (at mem ref))
+-- This is a lazy version so that we don't over-generate at-nodes, which is an lvalue
+data DerefF e t where
+  DerefF :: e ValueT -> e MemoryT -> DerefF e ValueT
+
+-- Pure operations, don't deref their arguments and don't depend on memory
+data UnopF e t where
+  UnopF :: e OpT -> e ValueT -> UnopF e ValueT
+
+data BinopF e t where
+  BinopF :: e OpT -> e ValueT -> e ValueT -> BinopF e ValueT
 
 -- Arguments by order of execution
 data AssignF e t where
   AssignF :: e ValueT -> e AddressT -> e MemoryT -> AssignF e MemValT
 
+-- Function call implicitly deref their arguments
 data FunctionCallF e t where
   FunctionCallF :: e ValueT -> e [FArgT] -> e MemoryT -> FunctionCallF e MemValT
 
@@ -113,7 +123,7 @@ data CondF e t where
 data CondMemF e t where
   CondMemF :: e ValueT -> e MemoryT -> e MemoryT -> CondMemF e MemoryT
 
-type YGenericSig = CondMemF :+: CondF :+: FunctionArgsF :+: FunctionCallF :+: AssignF :+: UnOpF :+: BinOpF :+: SelF :+: IdentF :+: ConstF :+: NothingF :+: UnknownF :+: ValF :+: MemF :+: MemGenesisF :+: AnyHeap :+: AnyStack :+: CommonOp :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
+type YGenericSig = CondMemF :+: CondF :+: FunctionArgsF :+: FunctionCallF :+: AssignF :+: UnopF :+: BinopF :+: DerefF :+: AtF :+: SelF :+: IdentF :+: ConstF :+: NothingF :+: UnknownF :+: ValF :+: MemF :+: MemGenesisF :+: AnyHeap :+: AnyStack :+: CommonOp :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
 
 newtype Name = Name [Char] deriving (Eq, Show, Ord)
 newtype Occurrence = Occurrence [Label] deriving (Eq, Show)
@@ -211,7 +221,8 @@ ytransUnknown (f :&: l) = getMem >>= (insertNode [l]) . UnknownF >>= updateMem
 class (CanYTrans f) => YTrans f g y t where
   ytrans :: (MonadYogo y m) => YTranslateM m f g y t
 
-ytranslate :: (CanYTrans f, MonadYogo y m, YTrans f f y t) => GTranslateM m (TermLab f) (ID y t)
+ytranslate :: (CanYTrans f, MonadYogo y m, YTrans f f y t)
+           => GTranslateM m (TermLab f) (ID y t)
 ytranslate f = (ytrans . unTerm) f
 
 instance {-# OVERLAPPABLE #-} (CanYTrans f) => YTrans f g y t where

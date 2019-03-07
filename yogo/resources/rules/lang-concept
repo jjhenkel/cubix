@@ -5,5 +5,5 @@
 (defnode x-or-y-value [x y])
 (defnode range [init n k])
 (defnode get [m k])
-(defnode map-membership [m k])
+(defnode membership [m k])
 (defnode size [m])
