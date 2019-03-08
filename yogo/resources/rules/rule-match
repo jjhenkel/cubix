@@ -54,16 +54,15 @@
   (map-before <- (engine/q mem-in m))
   (map-after <- (engine/q (generic/mem as) m)))
 
-;; ;; ------------
-;; ;; Element count
-;; ;; ------------
+;; ------------
+;; Element count
+;; ------------
 
-;; (defmatch seq-element-count
-;;   "final(loop(0, ?, cond(iter(seq) == k, loop + 1, loop)))"
-;;   (answer <- (generic/final counter _))
-;;   (counter <- (generic/loop (generic/const 0) _ next depth))
-;;   (next <- (generic/cond p inc counter))
-;;   (inc <- (generic/binop :+ counter (generic/const 1)))
-;;   (p <- (generic/binop :== e k))
-;;   (e <- (generic/iter _ _))
-;;   (invariant k depth))
+(defmatch seq-element-count
+  (answer <- (generic/final depth _ counter))
+  (counter <- (generic/loop depth (generic/const 0) next))
+  (next <- (generic/cond p inc counter))
+  (inc <- (generic/binop :+ counter (generic/const 1)))
+  (p <- (generic/binop :== e k))
+  (e <- (generic/iter-v depth coll))
+  (invariant k depth))

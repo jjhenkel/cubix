@@ -72,7 +72,6 @@
                                       (concept/fcall-name _ "enumerate"
                                                           (generic/fargs l (generic/nothing)))))))
   =>
-  (println "yp")
   (generic/mem
    (generic/assign
     (generic/mem
