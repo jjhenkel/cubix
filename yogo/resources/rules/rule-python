@@ -9,7 +9,7 @@
 (defrule fn-pure
   (mem-out <- (generic/mem (concept/fcall-name mem-in name _)))
   =>
-  (if (#{} name) mem-in mem-out))
+  (if (#{"range", "enumerate"} name) mem-in mem-out))
 
 (defrule fn-readonly
   (q-after <- (engine/q (generic/mem (concept/fcall-name mem-in name _)) lvalue))
@@ -43,3 +43,39 @@
   (generic/unop
    :not
    (concept/membership m k)))
+
+(defrule range-1
+  (generic/val (concept/fcall-name _ "range" fargs))
+  (fargs <- (generic/fargs n (generic/nothing)))
+  =>
+  (println "range-1")
+  (concept/range (generic/const 0) n (generic/const 1)))
+
+(defrule range-2
+  (generic/val (concept/fcall-name _ "range" fargs))
+  (fargs <- (generic/fargs i (generic/fargs n (generic/nothing))))
+  =>
+  (println "range-2")
+  (concept/range i n (generic/const 1)))
+
+(defrule range-3
+  (generic/val (concept/fcall-name _ "range" fargs))
+  (fargs <- (generic/fargs i (generic/fargs n (generic/fargs k (generic/nothing)))))
+  =>
+  (concept/range i n k))
+
+(defrule enumerate
+  (generic/mem
+   (generic/assign mem
+                   (python/list-lv a1 a2)
+                   (generic/iter-v d (generic/val
+                                      (concept/fcall-name _ "enumerate"
+                                                          (generic/fargs l (generic/nothing)))))))
+  =>
+  (println "yp")
+  (generic/mem
+   (generic/assign
+    (generic/mem
+     (generic/assign
+      mem a1 (generic/iter-v d (concept/seq (generic/const 0) (generic/const 1)))))
+    a2 (generic/iter-v d l))))

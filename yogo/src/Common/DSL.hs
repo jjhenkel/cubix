@@ -107,6 +107,7 @@ instance SigToLangDSL UnknownF where nodeDef _ = Just (nsCommon, "unknown", ["sr
 instance SigToLangDSL MemF where nodeDef _ = Just (nsCommon, "mem", ["src"], [anyMem])
 instance SigToLangDSL ValF where nodeDef _ = Just (nsCommon, "val", ["src"], [])
 instance SigToLangDSL NothingF where nodeDef _ = Just (nsCommon, "nothing", [], [])
+instance SigToLangDSL TempF where nodeDef _ = Just (nsCommon, "temp", ["temp-id", "depth"], [])
 instance SigToLangDSL ConstF where nodeDef _ = Just (nsCommon, "const", ["$const"], [])
 instance SigToLangDSL IdentF where nodeDef _ = Just (nsCommon, "ident", ["$name"], [anyStackLValue])
 instance SigToLangDSL SelF where nodeDef _ = Just (nsCommon, "sel", ["base", "offset"], [])
@@ -119,6 +120,12 @@ instance SigToLangDSL FunctionCallF where nodeDef _ = Just (nsCommon, "fcall", [
 instance SigToLangDSL FunctionArgsF where nodeDef _ = Just (nsCommon, "fargs", ["arg", "args"], [])
 instance SigToLangDSL CondF where nodeDef _ = Just (nsCommon, "cond", ["p", "t", "f"], [])
 instance SigToLangDSL CondMemF where nodeDef _ = Just (nsCommon, "cond-mem", ["p", "t", "f"], [anyMem, qualifiedNodeType (Proxy :: Proxy CondF)])
+instance SigToLangDSL LoopF where nodeDef _ = Just (nsCommon, "loop", ["depth", "init", "next"], [])
+instance SigToLangDSL LoopMemF where nodeDef _ = Just (nsCommon, "loop-mem", ["depth", "init", "next"], [anyMem, qualifiedNodeType (Proxy :: Proxy LoopF)])
+instance SigToLangDSL FinalF where nodeDef _ = Just (nsCommon, "final", ["depth", "cond", "loop"], [])
+instance SigToLangDSL FinalMemF where nodeDef _ = Just (nsCommon, "final-mem", ["depth", "cond", "loop"], [anyMem, qualifiedNodeType (Proxy :: Proxy FinalF)])
+instance SigToLangDSL IterVF where nodeDef _ = Just (nsCommon, "iter-v", ["depth", "src"], [])
+instance SigToLangDSL IterPF where nodeDef _ = Just (nsCommon, "iter-p", ["depth", "src"], [])
 
 ----
 
@@ -169,6 +176,9 @@ instance (UnknownF :<: y) => NodeToGraphDSL UnknownF y where
 instance (NothingF :<: y) => NodeToGraphDSL NothingF y where
   nodeArgs _ = []
 
+instance (TempF :<: y) => NodeToGraphDSL TempF y where
+  nodeArgs (TempF tempId depth) = [show tempId, show depth]
+
 instance (ConstF :<: y) => NodeToGraphDSL ConstF y where
   nodeArgs (ConstF p) = [primitiveToDSL p]
 
@@ -204,6 +214,24 @@ instance (CondF :<: y) => NodeToGraphDSL CondF y where
 
 instance (CondMemF :<: y) => NodeToGraphDSL CondMemF y where
   nodeArgs (CondMemF p t f) = [idToDSL p, idToDSL t, idToDSL f]
+
+instance (LoopF :<: y) => NodeToGraphDSL LoopF y where
+  nodeArgs (LoopF depth init next) = [show depth, idToDSL init, idToDSL next]
+
+instance (LoopMemF :<: y) => NodeToGraphDSL LoopMemF y where
+  nodeArgs (LoopMemF depth init next) = [show depth, idToDSL init, idToDSL next]
+
+instance (FinalF :<: y) => NodeToGraphDSL FinalF y where
+  nodeArgs (FinalF depth cond loop) = [show depth, idToDSL cond, idToDSL loop]
+
+instance (FinalMemF :<: y) => NodeToGraphDSL FinalMemF y where
+  nodeArgs (FinalMemF depth cond loop) = [show depth, idToDSL cond, idToDSL loop]
+
+instance (IterVF :<: y) => NodeToGraphDSL IterVF y where
+  nodeArgs (IterVF depth src) = [show depth, idToDSL src]
+
+instance (IterPF :<: y) => NodeToGraphDSL IterPF y where
+  nodeArgs (IterPF depth src) = [show depth, idToDSL src]
 
 quoteStr :: String -> String
 quoteStr s = "\"" ++ s ++ "\""

@@ -13,6 +13,7 @@
 module Python.Trans (
   YPythonSig
   , PyLhs(..)
+  , PyListLV(..)
   , PyOp(..)
   , PyOp'(..)
   , toGraphPython
@@ -22,7 +23,7 @@ import Data.Proxy ( Proxy(..) )
 import Debug.Trace
 import Data.Typeable
 
-import Control.Lens ( makeLenses, over, use, (^.), (.=), (%=) )
+import Control.Lens ( makeLenses, over, use, (^.), (.=), (%=), (+=), (-=) )
 import Control.Monad ( MonadPlus, mzero, liftM )
 import Control.Monad.Trans.Maybe ( runMaybeT )
 import Control.Monad.Identity ( Identity(..), runIdentity )
@@ -39,15 +40,19 @@ import qualified Cubix.Language.Python.Parametric.Common as Py
 
 import Common.Trans
 
--- Represent a compound address
+-- Represent a compound address for multiple assignment, as in a = b = 0
 data PyLhs e l where
   PyLhs :: e AddressT -> e AddressT -> PyLhs e AddressT
+
+-- Represent destructurable address, as in ((a, b), c) = ((1, 2), 3)
+data PyListLV e l where
+  PyListLV :: e AddressT -> e AddressT -> PyListLV e AddressT
 
 data PyOp' = PyIn | PyNotIn
 data PyOp (e :: * -> *) t where
   PyOp :: PyOp' -> PyOp e OpT
 
-type YPythonSig = PyOp :+: PyLhs :+: YGenericSig
+type YPythonSig = PyOp :+: PyListLV :+: PyLhs :+: YGenericSig
 type PyID t = ID YPythonSig t
 type YTranslatePyM m f t = GTranslateM m ((f :&: Label) Py.MPythonTermLab) (ID YPythonSig t)
 
@@ -82,7 +87,36 @@ instance YTrans Py.Expr Py.MPythonSig YPythonSig ValueT where
   ytrans (Py.UnaryOp op arg _ :&: l) =
     UnopF <$> ytranslate op <*> ytranslate arg >>= insertNode [l]
   ytrans (Py.Paren expr _ :&: _) = ytranslate expr
-  ytrans f = error "Py.expr Not Implemented"
+  ytrans f = error "Py.expr Value Not Implemented"
+
+ytransLhs :: (MonadYogoPy m, YTrans Py.MPythonSig Py.MPythonSig YPythonSig [t])
+          => [Label] -> Py.MPythonTermLab [t] -> m (PyID AddressT)
+ytransLhs labels t = do
+  lvalues <- ytranslate t
+  go (fromIds lvalues)
+    where
+      -- As an optimization, PyLhs (ConsF lv NilF) => lv.
+      --- This is so that most assignments will bypass PyLhs altogether.
+      go [] = error "Not expecting empty PyLhs"
+      go [(l, id)] = return id
+      go ((l, id) : xs) = go xs >>= (insertNode (l : labels)) . (PyLhs id)
+
+ytransListLV :: (MonadYogoPy m, YTrans Py.MPythonSig Py.MPythonSig YPythonSig [t])
+             => [Label] -> Py.MPythonTermLab [t] -> m (PyID AddressT)
+ytransListLV labels t = do
+  lvalues <- ytranslate t
+  go (fromIds lvalues)
+    where
+      go [] = error "Not expecting empty PyLhs"
+      go [(l, id)] = return id
+      go ((l, id) : xs) = go xs >>= (insertNode (l : labels)) . (PyListLV id)
+
+instance YTrans Py.Expr Py.MPythonSig YPythonSig AddressT where
+  ytrans (Py.Var ident _ :&: l) = ytranslate ident
+  ytrans (Py.Paren expr _ :&: _) = ytranslate expr
+  -- TODO, make (x,) a list too
+  ytrans (Py.Tuple t _ :&: l) = ytransListLV [l] t
+  ytrans f = error "Py.expr AddressT Not Implemented"
 
 ytransChainComp :: (YTrans Py.MPythonSig Py.MPythonSig YPythonSig ValueT,
                     YTrans Py.MPythonSig Py.MPythonSig YPythonSig OpT,
@@ -139,6 +173,29 @@ instance YTrans Py.Statement Py.MPythonSig YPythonSig StatementT where
     ytranslate expr >>= \(_ :: PyID ValueT) -> return Statement
   ytrans (Py.Conditional condGuards condElse _ :&: l) =
     ytransConditional l condGuards condElse >> return Statement
+
+  ytrans (Py.While whileCond whileBody whileElse _ :&: l) = do
+    temp <- enterLoop
+    cond <- ytranslate whileCond
+    _ :: PyID [StatementT] <- ytranslate whileBody
+    exitLoop [l] temp cond
+    case project' whileElse of
+      Just f@(Cx.ConsF _ _) -> ytransUnknown (f :&: getLabel whileElse) >> return Statement
+      _ -> return Statement
+
+  ytrans (Py.For targets generator body forElse _ :&: l) = do
+    generator' <- ytranslate generator
+    temp <- enterLoop
+    iter <- iIterV [(getLabel generator)] generator'
+    cond <- iIterP [(getLabel generator)] generator'
+    targets <- ytransListLV [] targets
+    AssignF iter targets <$> getMem >>= insertNode [l] >>= updateMemVal
+    _ :: PyID [StatementT] <- ytranslate body
+    exitLoop [l] temp cond
+    case project' forElse of
+      Just f@(Cx.ConsF _ _) -> ytransUnknown (f :&: getLabel forElse) >> return Statement
+      _ -> return Statement
+
   ytrans f = error "Py.Statement Not Implemented"
 
 instance YTrans Py.Module Py.MPythonSig YPythonSig ScopeT where
@@ -152,15 +209,7 @@ instance YTrans Py.SubscriptLValue Py.MPythonSig YPythonSig AddressT where
     SelF <$> ytranslate m <*> ytranslate k >>= insertNode [l]
 
 instance YTrans Py.PyLhs Py.MPythonSig YPythonSig AddressT where
-  ytrans (Py.PyLhs t :&: l) = do
-    lvalues <- ytranslate t
-    go (fromIds lvalues)
-      where
-        -- As an optimization, PyLhs (ConsF lv NilF) => lv.
-        --- This is so that most assignments will bypass PyLhs altogether.
-        go [] = error "Not expecting empty PyLhs"
-        go [(l', id)] = return id
-        go ((l', id) : xs) = go xs >>= (insertNode [l, l']) . (PyLhs id)
+  ytrans (Py.PyLhs t :&: l) = ytransLhs [l] t
 
 instance YTrans Py.IdentIsIdent Py.MPythonSig YPythonSig AddressT where
   ytrans (Py.IdentIsIdent t :&: _) = ytranslate t
@@ -191,7 +240,7 @@ ytransPythonModule :: (MonadYogoPy m)
 ytransPythonModule = ytranslate
 
 initState :: YogoState YPythonSig
-initState = YogoState [] [] Map.empty 0
+initState = YogoState [] [] Map.empty 0 0
 
 fileToGraphPython :: Py.MPythonTermLab l -> YFile YPythonSig
 fileToGraphPython t =

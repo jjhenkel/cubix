@@ -50,29 +50,33 @@
   =>
   x)
 
-;; ;; ----------
-;; ;; Loops
-;; ;; ----------
+;; ----------
+;; Loops
+;; ----------
 
-;; (defrule make-final
-;;   "Q(final(loop, depth), lvalue) = final(Q(loop, lvalue), depth)"
-;;   (engine/q (generic/final loop depth) lvalue)
-;;   =>
-;;   (generic/final (engine/q loop lvalue) depth))
+(defrule make-loop
+  (engine/q (mem-loop <- (generic/loop depth init next)) lvalue)
+  =>
+  (generic/loop depth (engine/q init lvalue) (engine/q next lvalue)))
 
-;; ;; TODO depth(x, depth-x), (depth-x < depth-final) => Q(x, depth-final) = x
+(defrule make-final
+  "Q(final(loop, depth), lvalue) = final(Q(loop, lvalue), depth)"
+  (engine/q (generic/final depth cond loop) lvalue)
+  =>
+  (generic/final depth cond (engine/q loop lvalue)))
 
-;; (defrule join-qs-loop
-;;   (q-loop <- (engine/q (generic/loop-mem init _ next _) lvalue))
-;;   (q-loop <- (engine/q next lvalue))
-;;   =>
-;;   (engine/q init lvalue))
+(defrule join-qs-loop
+  (q-loop <- (engine/q (generic/loop _ init next) lvalue))
+  (q-loop <- (engine/q next lvalue))
+  =>
+  (engine/q init lvalue))
 
-;; (defrule join-qs-final
-;;   (q-loop <- (engine/q (loop <- (generic/loop-mem init _ _ depth) lvalue)))
-;;   (q-loop <- (engine/q init lvalue))
-;;   =>
-;;   (engine/q (generic/final-mem loop depth) lvalue))
+(defrule join-qs-final
+  (q-loop <- (engine/q (loop <- (generic/loop depth init _) lvalue)))
+  (q-loop <- (engine/q init lvalue))
+  (final <- (generic/final depth loop _))
+  =>
+  (engine/q final lvalue))
 
 ;; ----------
 ;; Boolean
@@ -128,14 +132,11 @@
   =>
   (concept/x-or-y-value x y))
 
-;; (defrule loop-init-to-excl-n-by-k
-;;   "depth(n) < depth-loop, depth(k) < depth-loop, then loop-i(init, loop-i < n, loop-i + k,
-;;   depth-loop) = iter(range(init, n, k), depth-loop)"
-;;   (i <- (generic/loop init (generic/binop :< i n) (generic/binop :+ i k) depth))
-;;   (invariant n depth)
-;;   (invariant k depth)
-;;   =>
-;;   (generic/iter (concept/range init n k) depth))
+(defrule loop-num-seq
+  (i <- (generic/loop depth init (generic/binop :+ i k)))
+  (invariant k depth)
+  =>
+  (generic/iter-v depth (concept/seq init k)))
 
 ;; (defrule len-obj-size
 ;;   "val(fcall-name(mem, 'len', [m])) == size(Q(mem, at(m)))"
@@ -150,10 +151,22 @@
 ;;   =>
 ;;   (concept/get (engine/q mem (generic/at m)) k))
 
-;; ;; TODO m1, me heap compatible
-;; (defrule arr-iter
-;;   "get(arr, iter(range(0, size(arr), 1))) = iter(arr)"
-;;   (concept/get arr (generic/iter (concept/range (generic/const 0) (concept/size arr) (generic/const 1)) depth))
-;;   ;; TODO (invariant arr depth)?
-;;   =>
-;;   (generic/iter arr depth))
+(defrule seq-range-iter-v
+  (generic/iter-v d (concept/range i n k))
+  =>
+  (println "iter-v" i k)
+  (generic/iter-v d (concept/seq i k)))
+
+(defrule seq-range-iter-p
+  (generic/iter-p d (concept/range i n k))
+  =>
+  (generic/binop :< (generic/iter-v d (concept/seq i k)) n))
+
+(defrule seq-n+1
+  (generic/binop
+   :<
+   (seq <- (generic/iter-v d (concept/seq i k)))
+   (generic/binop :+ n k))
+  (invariant n d)
+  =>
+  (generic/binop :<= seq n))

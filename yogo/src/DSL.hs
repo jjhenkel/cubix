@@ -38,8 +38,7 @@ generateGraphLine (YGraphNode (E id) (E (Node node)) occurrence) =
   case nodeForm node of
     Left form -> idToDSL id ++ " " ++ form
     Right (fn, args) -> idToDSL id ++ " (" ++ fn ++ " " ++ (intercalate " " args) ++ " " ++ occurrenceToDSL occurrence ++ ")"
-generateGraphLine (YGraphEq (E id1) (E id2)) = undefined
-generateGraphLine (YGraphMemSuccessor id1 id2) = undefined
+generateGraphLine (YGraphEq (E id1) (E id2)) = "_ (s/make-eq " ++ idToDSL id1 ++ " " ++ idToDSL id2 ++ ")"
 
 generateGraph :: (NodeToGraphDSL f f) => Name -> YGraph f -> String
 generateGraph (Name name) graph =

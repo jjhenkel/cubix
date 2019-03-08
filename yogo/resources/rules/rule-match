@@ -40,11 +40,12 @@
   (input <- (generic/val fcall-input))
   (lang <- (concept/fcall-name _ "input" _)))
 
-;; (defmatch factorial
-;;   (factorial <- (generic/final factorial-loop depth))
-;;   (factorial-loop <- (generic/loop c1 _ (generic/binop :* factorial-loop iter-range) depth))
-;;   (iter-range <- (generic/iter (concept/range c1 n c1) depth))
-;;   (c1 <- (generic/const 1)))
+(defmatch factorial
+  (factorial <- (generic/final depth (generic/binop :<= i n) factorial-loop))
+  (factorial-loop <- (generic/loop depth c1 (generic/binop :* factorial-loop i)))
+  (i <- (generic/iter-v depth (concept/seq c1 c1)))
+  (c1 <- (generic/const 1))
+  (invariant n depth))
 
 #_(defmatch map-set-default
   (map-final <- (generic/cond map-mem map-before map-after))

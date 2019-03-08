@@ -17,7 +17,7 @@ import Data.Proxy ( Proxy(..) )
 import Debug.Trace
 import Data.Typeable
 
-import Control.Lens ( makeLenses, over, use, (.=), (%=) )
+import Control.Lens ( makeLenses, over, use, (.=), (%=), (+=), (-=) )
 import Control.Monad ( MonadPlus, mzero, liftM )
 import Control.Monad.Trans.Maybe ( runMaybeT )
 import Control.Monad.Identity ( Identity(..), runIdentity )
@@ -43,6 +43,8 @@ data FArgT
 data OpT -- Operators
 data StatementT
 data ScopeT -- functions, modules
+
+type Depth = Int
 
 data Primitive = IntegerF Integer | IntF Int | BoolF Bool | StringF String
 
@@ -81,6 +83,9 @@ data UnknownF e t where
 
 data NothingF (e :: * -> *) t where
   NothingF :: NothingF e t
+
+data TempF (e :: * -> *) t where
+  TempF :: Int -> Depth -> TempF e t
 
 data ConstF (e :: * -> *) t where
   ConstF :: Primitive -> ConstF e ValueT
@@ -123,7 +128,29 @@ data CondF e t where
 data CondMemF e t where
   CondMemF :: e ValueT -> e MemoryT -> e MemoryT -> CondMemF e MemoryT
 
-type YGenericSig = CondMemF :+: CondF :+: FunctionArgsF :+: FunctionCallF :+: AssignF :+: UnopF :+: BinopF :+: DerefF :+: AtF :+: SelF :+: IdentF :+: ConstF :+: NothingF :+: UnknownF :+: ValF :+: MemF :+: MemGenesisF :+: AnyHeap :+: AnyStack :+: CommonOp :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
+data LoopF e t where
+  -- depth, init, next
+  LoopF :: Depth -> e ValueT -> e ValueT -> LoopF e ValueT
+
+data LoopMemF e t where
+  -- depth, init, next
+  LoopMemF :: Depth -> e MemoryT -> e MemoryT -> LoopMemF e MemoryT
+
+data FinalF e t where
+  -- depth, cond, loop
+  FinalF :: Depth -> e ValueT -> e ValueT -> FinalF e ValueT
+
+data FinalMemF e t where
+  -- depth, cond, loop
+  FinalMemF :: Depth -> e ValueT -> e MemoryT -> FinalMemF e MemoryT
+
+data IterVF e t where
+  IterVF :: Depth -> e ValueT -> IterVF e ValueT
+
+data IterPF e t where
+  IterPF :: Depth -> e ValueT -> IterPF e ValueT
+
+type YGenericSig = IterPF :+: IterVF :+: FinalMemF :+: FinalF :+: LoopMemF :+: LoopF :+: CondMemF :+: CondF :+: FunctionArgsF :+: FunctionCallF :+: AssignF :+: UnopF :+: BinopF :+: DerefF :+: AtF :+: SelF :+: IdentF :+: ConstF :+: TempF :+: NothingF :+: UnknownF :+: ValF :+: MemF :+: MemGenesisF :+: AnyHeap :+: AnyStack :+: CommonOp :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
 
 newtype Name = Name [Char] deriving (Eq, Show, Ord)
 newtype Occurrence = Occurrence [Label] deriving (Eq, Show)
@@ -147,7 +174,6 @@ data Node (f :: (* -> *) -> * -> *) t = Node (f (ID f) t)
 
 data YGraphEntry f = YGraphNode (E (ID f)) (E (Node f)) Occurrence
                    | YGraphEq (E (ID f)) (E (ID f))
-                   | YGraphMemSuccessor (ID f MemoryT) (ID f MemoryT)
 
 type YGraph f = [YGraphEntry f]
 type YFile f = Map Name (YGraph f)
@@ -157,6 +183,7 @@ data YogoState f = YogoState { _nameScope :: [Name]
                              , _memScope :: [ID f MemoryT]
                              , _file  :: YFile f
                              , _lastID :: Int
+                             , _loopDepth :: Depth
                              }
 makeLenses ''YogoState
 
@@ -169,7 +196,6 @@ type YTranslateM m f sig ysig t = GTranslateM m ((f :&: Label) (TermLab sig)) (I
 instance Show (YGraphEntry f) where
   show (YGraphNode (E id) _ _) = show id
   show (YGraphEq (E id1) (E id2)) = "Eq " ++ show id1 ++  " " ++ show id2
-  show (YGraphMemSuccessor id1 id2) = "MemSuc " ++ show id1 ++ " " ++ show id2
 
 getScopeName :: (MonadYogo f m) => m Name
 getScopeName = liftM head $ use nameScope
@@ -181,13 +207,32 @@ newScope name = do
   insertNode [] MemGenesisF >>= updateMem
 
 getNextID :: (MonadYogo f m) => m (ID f t)
-getNextID = lastID %= (+ 1) >> liftM ID (use lastID)
+getNextID = lastID += 1 >> liftM ID (use lastID)
+
+enterLoop :: (MonadYogo f m, TempF :<: f) => m (ID f MemoryT)
+enterLoop = do
+  loopDepth += 1
+  TempF <$> (use lastID >>= return . (1 +)) <*> use loopDepth >>= insertNode [] >>= pushMem
+
+exitLoop :: (MonadYogo f m, LoopMemF :<: f, FinalMemF :<: f)
+         => [Label] -> ID f MemoryT -> ID f ValueT -> m (ID f MemoryT)
+exitLoop labels temp cond = do
+  next <- popMem
+  init <- popMem
+  depth <- use loopDepth
+  loop <- insertNode labels $ LoopMemF depth init next
+  addEntry $ YGraphEq (E temp) (E loop)
+  final <- insertNode [] $ FinalMemF depth cond loop
+  loopDepth -= 1
+  pushMem final
+
+addEntry :: (MonadYogo f m) => YGraphEntry f -> m ()
+addEntry entry = getScopeName >>= (file %=) . (Map.adjust (entry :))
 
 insertNode' :: (MonadYogo f m, g :<: f) => Occurrence -> g (ID f) t -> m (ID f t)
 insertNode' occ node = do
   id <- getNextID
-  let entry = YGraphNode (E id) ((E . Node . inj) node) occ
-  getScopeName >>= (file %=) . (Map.adjust (entry :))
+  addEntry $ YGraphNode (E id) ((E . Node . inj) node) occ
   return id
 
 insertNode :: (MonadYogo f m, g :<: f) => [Label] -> g (ID f) t -> m (ID f t)
@@ -198,6 +243,12 @@ iMemF labels memVal = insertNode labels (MemF memVal) >>= updateMem
 
 iQ :: (MonadYogo f m, Q :<: f) => [Label] -> ID f AddressT -> m (ID f ValueT)
 iQ labels lvalue = getMem >>= (insertNode labels) . (Q lvalue)
+
+iIterV :: (MonadYogo f m, IterVF :<: f) => [Label] -> ID f ValueT -> m (ID f ValueT)
+iIterV labels iterable = use loopDepth >>= \depth -> insertNode labels (IterVF depth iterable)
+
+iIterP :: (MonadYogo f m, IterPF :<: f) => [Label] -> ID f ValueT -> m (ID f ValueT)
+iIterP labels iterable = use loopDepth >>= \depth -> insertNode labels (IterPF depth iterable)
 
 getMem :: (MonadYogo f m) => m (ID f MemoryT)
 getMem = liftM head $ use memScope
