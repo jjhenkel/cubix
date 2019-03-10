@@ -9,7 +9,7 @@
 (defrule fn-pure
   (mem-out <- (generic/mem (concept/fcall-name mem-in name _)))
   =>
-  (if (#{"range", "enumerate"} name) mem-in mem-out))
+  (if (#{"range", "enumerate", "len"} name) mem-in mem-out))
 
 (defrule fn-readonly
   (q-after <- (engine/q (generic/mem (concept/fcall-name mem-in name _)) lvalue))
@@ -63,6 +63,20 @@
   (fargs <- (generic/fargs i (generic/fargs n (generic/fargs k (generic/nothing)))))
   =>
   (concept/range i n k))
+
+(defrule q-object
+  "Python objects are fully represented, not just by heap address"
+  (engine/q mem (generic/at m))
+  =>
+  (println "m-bypass")
+  m)
+
+(defrule len-obj-size
+  "val(fcall-name(mem, 'len', [m])) == size(Q(mem, at(m)))"
+  (generic/val (concept/fcall-name _ "len" (generic/fargs m (generic/nothing))))
+  =>
+  (println "size")
+  (concept/size m))
 
 (defrule enumerate
   (generic/mem

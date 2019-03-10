@@ -138,18 +138,12 @@
   =>
   (generic/iter-v depth (concept/seq init k)))
 
-;; (defrule len-obj-size
-;;   "val(fcall-name(mem, 'len', [m])) == size(Q(mem, at(m)))"
-;;   (generic/val (concept/fcall-name mem "len" (generic/fargs m (generic/nothing))))
-;;   =>
-;;   (concept/size (engine/q mem (generic/at m))))
-
-;; (defrule m-get
-;;   "Q(mem, sel(m, k)) = get(Q(mem, at(m)), k)"
-;;   ;; Once m is defined, it's at-Q always returns a object.
-;;   (engine/q mem (generic/sel m k))
-;;   =>
-;;   (concept/get (engine/q mem (generic/at m)) k))
+(defrule m-get
+  ;; Once m is defined, it's at-Q always returns a object.
+  (engine/q mem (generic/sel m k))
+  =>
+  (println "get")
+  (concept/get (engine/q mem (generic/at m)) k))
 
 (defrule seq-range-iter-v
   (generic/iter-v d (concept/range i n k))
@@ -170,3 +164,17 @@
   (invariant n d)
   =>
   (generic/binop :<= seq n))
+
+(defrule iter-v-m-get
+  (concept/get m (generic/iter-v depth (concept/seq (generic/const 0) (generic/const 1))))
+  =>
+  (println "iter-v-m-get")
+  (generic/iter-v depth m))
+
+(defrule iter-p-m-get
+  (generic/binop :<
+                 (generic/iter-v depth (concept/seq (generic/const 0) (generic/const 1)))
+                 (concept/size m))
+  =>
+  (println "iter-p-m-get")
+  (generic/iter-p depth m))
