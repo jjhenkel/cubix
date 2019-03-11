@@ -211,6 +211,9 @@ instance YTrans Py.SubscriptLValue Py.MPythonSig YPythonSig AddressT where
 instance YTrans Py.PyLhs Py.MPythonSig YPythonSig AddressT where
   ytrans (Py.PyLhs t :&: l) = ytransLhs [l] t
 
+instance YTrans Py.PyBlock Py.MPythonSig YPythonSig [StatementT] where
+  ytrans (Py.PyBlock _ t :&: _) = ytranslate t
+
 instance YTrans Py.IdentIsIdent Py.MPythonSig YPythonSig AddressT where
   ytrans (Py.IdentIsIdent t :&: _) = ytranslate t
 
@@ -234,6 +237,15 @@ instance YTrans Py.PyCompIsExpr Py.MPythonSig YPythonSig ValueT where
 
 instance YTrans Py.AssignIsStatement Py.MPythonSig YPythonSig StatementT where
   ytrans (Py.AssignIsStatement t :&: _) = ytranslate t >>= \(_ :: PyID MemValT) -> return Statement
+
+instance YTrans Py.FunctionDefIsStatement Py.MPythonSig YPythonSig StatementT where
+  ytrans (Py.FunctionDefIsStatement t :&: _) = ytranslate t
+
+instance YTrans Py.StatementIsBlockItem Py.MPythonSig YPythonSig StatementT where
+  ytrans (Py.StatementIsBlockItem t :&: _) = ytranslate t
+
+instance YTrans Py.PyBlockIsFunctionBody Py.MPythonSig YPythonSig [StatementT] where
+  ytrans (Py.PyBlockIsFunctionBody t :&: _) = ytranslate t
 
 ytransPythonModule :: (MonadYogoPy m)
                    => TranslateM m Py.MPythonTermLab Py.ModuleL (ID YPythonSig ScopeT)

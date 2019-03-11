@@ -79,7 +79,7 @@ data ValF e t where
   ValF :: e MemValT -> ValF e ValueT
 
 data UnknownF e t where
-  UnknownF :: e MemoryT -> UnknownF e MemoryT
+  UnknownF :: e MemoryT -> UnknownF e MemValT
 
 data NothingF (e :: * -> *) t where
   NothingF :: NothingF e t
@@ -182,7 +182,7 @@ type YProject f = Map FilePath (YFile f)
 data YogoState f = YogoState { _nameScope :: [Name]
                              , _memScope :: [ID f MemoryT]
                              , _file  :: YFile f
-                             , _lastID :: Int
+                             , _counter :: Int
                              , _loopDepth :: Depth
                              }
 makeLenses ''YogoState
@@ -203,16 +203,25 @@ getScopeName = liftM head $ use nameScope
 newScope :: (MonadYogo f m, MemGenesisF :<: f) => Name -> m (ID f MemoryT)
 newScope name = do
   nameScope %= (name :)
-  file .= Map.singleton name []
-  insertNode [] MemGenesisF >>= updateMem
+  file %= Map.insert name []
+  insertNode [] MemGenesisF >>= pushMem
+
+endScope :: (MonadYogo f m) => m (ID f ScopeT)
+endScope = do
+  nameScope %= tail
+  popMem
+  return Scope
+
+getCounter :: (MonadYogo f m) => m Int
+getCounter = counter += 1 >> use counter
 
 getNextID :: (MonadYogo f m) => m (ID f t)
-getNextID = lastID += 1 >> liftM ID (use lastID)
+getNextID = getCounter >>= return . ID
 
 enterLoop :: (MonadYogo f m, TempF :<: f) => m (ID f MemoryT)
 enterLoop = do
   loopDepth += 1
-  TempF <$> (use lastID >>= return . (1 +)) <*> use loopDepth >>= insertNode [] >>= pushMem
+  TempF <$> getCounter <*> use loopDepth >>= insertNode [] >>= pushMem
 
 exitLoop :: (MonadYogo f m, LoopMemF :<: f, FinalMemF :<: f)
          => [Label] -> ID f MemoryT -> ID f ValueT -> m (ID f MemoryT)
@@ -265,8 +274,9 @@ updateMem mem = popMem >> pushMem mem
 updateMemVal :: (MonadYogo f m, MemF :<: f) => ID f MemValT -> m (ID f MemValT)
 updateMemVal memVal = iMemF [] memVal >> return memVal
 
-ytransUnknown :: (CanYTrans f, MonadYogo y m, UnknownF :<: y) => YTranslateM m f g y MemoryT
-ytransUnknown (f :&: l) = getMem >>= (insertNode [l]) . UnknownF >>= updateMem
+ytransUnknown :: (CanYTrans f, MonadYogo y m,
+                  UnknownF :<: y, MemF :<: y) => YTranslateM m f g y MemValT
+ytransUnknown (f :&: l) = getMem >>= (insertNode [l]) . UnknownF >>= updateMemVal
 
 -- s is needed, otherwise cause Incoherent Instances when f is a signature type
 class (CanYTrans f) => YTrans f g y t where
@@ -277,7 +287,9 @@ ytranslate :: (CanYTrans f, MonadYogo y m, YTrans f f y t)
 ytranslate f = (ytrans . unTerm) f
 
 instance {-# OVERLAPPABLE #-} (CanYTrans f) => YTrans f g y t where
-  ytrans = const mzero
+  ytrans t = do
+    traceM $ show (Proxy :: Proxy f)
+    mzero
   -- ytrans = error $ show (typeRep (Proxy :: Proxy f))
 
 instance {-# OVERLAPPING #-} (YTrans f1 g y t, YTrans f2 g y t) => YTrans (f1 :+: f2) g y t where
@@ -326,3 +338,25 @@ instance (Cx.FunctionArgumentList :<: g, FunctionArgsF :<: y, NothingF :<: y, YT
 
 instance (Cx.PositionalArgument :<: g, YTrans g g y ValueT) => YTrans Cx.PositionalArgument g y ValueT where
   ytrans (Cx.PositionalArgument t :&: _) = ytranslate t
+
+instance (Cx.FunctionDef :<: g, Cx.Ident :<: g,
+          MemGenesisF :<: y, UnknownF :<: y, MemF :<: y, ValF :<: y, AssignF :<: y,
+          YTrans g g y [StatementT], YTrans g g y AddressT
+         ) => YTrans Cx.FunctionDef g y StatementT where
+  ytrans (Cx.FunctionDef _ fname _ fbody :&: l) = do
+    let name' = case project' fname of
+                  Just (Cx.Ident s) -> s
+                  _ -> error "Cx.FunctionDef: unexpected function name"
+    scopeName <- liftM (Name . (name' ++) . show) getCounter
+    newScope scopeName
+    _ :: ID y [StatementT] <- ytranslate fbody
+    endScope
+    before <- getMem
+    rvalue <- ytransUnknown (unTerm fbody) >>= insertNode [l] . ValF
+    after <- getMem
+    addEntry $ YGraphEq (E before) (E after)
+    AssignF rvalue <$> ytranslate fname <*> getMem >>= insertNode [l]
+    return Statement
+
+instance (Cx.Block :<: g, YTrans g g y [StatementT]) => YTrans Cx.Block g y [StatementT] where
+  ytrans (Cx.Block t _ :&: l) = ytranslate t
