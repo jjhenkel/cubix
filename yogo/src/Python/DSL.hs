@@ -18,17 +18,29 @@ nsPy = "python"
 
 instance SigToLangDSL PyLhs where nodeDef _ = Just (nsPy, "lhs", ["lv1", "lv2"], [anyLValue])
 instance SigToLangDSL PyListLV where nodeDef _ = Just (nsPy, "list-lv", ["lv", "lvs"], [anyLValue])
+instance SigToLangDSL PyArgKeyword where nodeDef _ = Just (nsPy, "arg-kw", ["param", "val"], [])
+instance SigToLangDSL PyArgSplat where nodeDef _ = Just (nsPy, "args", ["val"], [])
+instance SigToLangDSL PyArgKWSplat where nodeDef _ = Just (nsPy, "kwargs", ["val"], [])
 instance SigToLangDSL PyOp where nodeDef _ = Nothing
 
-instance (PyLhs :<: y) => NodeToGraphDSL PyLhs y where
+instance NodeToGraphDSL PyLhs YPythonSig where
   nodeArgs (PyLhs id1 id2) = [idToDSL id1, idToDSL id2]
 
-instance (PyListLV :<: y) => NodeToGraphDSL PyListLV y where
+instance NodeToGraphDSL PyListLV YPythonSig where
   nodeArgs (PyListLV id1 id2) = [idToDSL id1, idToDSL id2]
 
-instance (PyOp :<: y) => NodeToGraphDSL PyOp y where
+instance NodeToGraphDSL PyOp YPythonSig where
   nodeArgs _ = []
   nodeForm (PyOp op) = Left $ pyOpToDSL op
+
+instance NodeToGraphDSL PyArgKeyword YPythonSig where
+  nodeArgs (PyArgKeyword param val) = [idToDSL param, idToDSL val]
+
+instance NodeToGraphDSL PyArgSplat YPythonSig where
+  nodeArgs (PyArgSplat val) = [idToDSL val]
+
+instance NodeToGraphDSL PyArgKWSplat YPythonSig where
+  nodeArgs (PyArgKWSplat val) = [idToDSL val]
 
 pyOpToDSL :: PyOp' -> String
 pyOpToDSL PyIn = ":py-in"

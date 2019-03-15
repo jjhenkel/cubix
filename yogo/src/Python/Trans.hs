@@ -16,6 +16,9 @@ module Python.Trans (
   , PyListLV(..)
   , PyOp(..)
   , PyOp'(..)
+  , PyArgKeyword(..)
+  , PyArgSplat(..)
+  , PyArgKWSplat(..)
   , toGraphPython
   ) where
 
@@ -48,11 +51,20 @@ data PyLhs e l where
 data PyListLV e l where
   PyListLV :: e AddressT -> e AddressT -> PyListLV e AddressT
 
+data PyArgKeyword e l where
+  PyArgKeyword :: e AddressT -> e ValueT -> PyArgKeyword e ValueT
+
+data PyArgSplat e l where
+  PyArgSplat :: e ValueT -> PyArgSplat e ValueT
+
+data PyArgKWSplat e l where
+  PyArgKWSplat :: e ValueT -> PyArgKWSplat e ValueT
+
 data PyOp' = PyIn | PyNotIn
 data PyOp (e :: * -> *) t where
   PyOp :: PyOp' -> PyOp e OpT
 
-type YPythonSig = PyOp :+: PyListLV :+: PyLhs :+: YGenericSig
+type YPythonSig = PyArgKWSplat :+: PyArgSplat :+:PyArgKeyword :+: PyOp :+: PyListLV :+: PyLhs :+: YGenericSig
 type PyID t = ID YPythonSig t
 type YTranslatePyM m f t = GTranslateM m ((f :&: Label) Py.MPythonTermLab) (ID YPythonSig t)
 
@@ -215,6 +227,11 @@ instance YTrans Py.DotLValue Py.MPythonSig YPythonSig AddressT where
 instance YTrans Py.SubscriptLValue Py.MPythonSig YPythonSig AddressT where
   ytrans (Py.SubscriptLValue m k :&: l) =
     SelF <$> ytranslate m <*> ytranslate k >>= insertNode [l]
+
+instance YTrans Py.PythonArg Py.MPythonSig YPythonSig ValueT where
+  ytrans (Py.PythonArgSplat val :&: l) = PyArgSplat <$> ytranslate val >>= insertNode [l]
+  ytrans (Py.PythonArgKeyword param val :&: l) = PyArgKeyword <$> ytranslate param <*> ytranslate val >>= insertNode [l]
+  ytrans (Py.PythonArgKWSplat val :&: l) = PyArgKWSplat <$> ytranslate val >>= insertNode [l]
 
 instance YTrans Py.PyLhs Py.MPythonSig YPythonSig AddressT where
   ytrans (Py.PyLhs t :&: l) = ytransLhs [l] t
