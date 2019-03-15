@@ -99,6 +99,10 @@ data SelF e t where
 data AtF e t where
   AtF :: e ValueT -> AtF e AddressT
 
+data DotF e t where
+  -- object.ident
+  DotF :: e ValueT -> e AddressT -> DotF e AddressT
+
 -- (deref mem ref) = (q mem (at mem ref))
 -- This is a lazy version so that we don't over-generate at-nodes, which is an lvalue
 data DerefF e t where
@@ -150,7 +154,7 @@ data IterVF e t where
 data IterPF e t where
   IterPF :: Depth -> e ValueT -> IterPF e ValueT
 
-type YGenericSig = IterPF :+: IterVF :+: FinalMemF :+: FinalF :+: LoopMemF :+: LoopF :+: CondMemF :+: CondF :+: FunctionArgsF :+: FunctionCallF :+: AssignF :+: UnopF :+: BinopF :+: DerefF :+: AtF :+: SelF :+: IdentF :+: ConstF :+: TempF :+: NothingF :+: UnknownF :+: ValF :+: MemF :+: MemGenesisF :+: AnyHeap :+: AnyStack :+: CommonOp :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
+type YGenericSig = IterPF :+: IterVF :+: FinalMemF :+: FinalF :+: LoopMemF :+: LoopF :+: CondMemF :+: CondF :+: FunctionArgsF :+: FunctionCallF :+: AssignF :+: UnopF :+: BinopF :+: DerefF :+: DotF :+: AtF :+: SelF :+: IdentF :+: ConstF :+: TempF :+: NothingF :+: UnknownF :+: ValF :+: MemF :+: MemGenesisF :+: AnyHeap :+: AnyStack :+: CommonOp :+: Q :+: AnyMem :+: AnyLValue :+: AnyNode
 
 newtype Name = Name [Char] deriving (Eq, Show, Ord)
 newtype Occurrence = Occurrence [Label] deriving (Eq, Show)
@@ -288,7 +292,7 @@ ytranslate f = (ytrans . unTerm) f
 
 instance {-# OVERLAPPABLE #-} (CanYTrans f) => YTrans f g y t where
   ytrans t = do
-    traceM $ show (Proxy :: Proxy f)
+    traceM $ show $ typeRep (Proxy :: Proxy f)
     mzero
   -- ytrans = error $ show (typeRep (Proxy :: Proxy f))
 
@@ -323,21 +327,50 @@ instance (Cx.Assign :<: g, Cx.AssignOpEquals :<: g, AssignF :<: y, MemF :<: y, Y
   ytrans (Cx.Assign lv (project' -> Just (Cx.AssignOpEquals)) rv :&: l) =
     AssignF <$> ytranslate rv <*> ytranslate lv <*> getMem >>= insertNode [l] >>= updateMemVal
 
-instance (Cx.FunctionCall :<: g, FunctionCallF :<: y, MemF :<: y, YTrans g g y ValueT, YTrans g g y [FArgT]) => YTrans Cx.FunctionCall g y MemValT where
-  -- Assumes to be :=
-  ytrans (Cx.FunctionCall _ fn fargs :&: l) =
-    FunctionCallF <$> ytranslate fn <*> ytranslate fargs <*> getMem >>= insertNode [l] >>= updateMemVal
+type FunctionCallFragment f y = (Cx.FunctionCall :<: f, Cx.ListF :<: f, Cx.ReceiverArg :<: f,
+                                 Cx.FunctionArgumentList :<: f, Cx.PositionalArgument :<: f,
+                                 NothingF :<: y, FunctionCallF :<: y, FunctionArgsF :<: y,
+                                 MemF :<: y, DotF :<: y, Q :<: y)
 
-instance (Cx.FunctionArgumentList :<: g, FunctionArgsF :<: y, NothingF :<: y, YTrans g g y [ValueT]) => YTrans Cx.FunctionArgumentList g y [FArgT] where
-  ytrans (Cx.FunctionArgumentList t :&: l) = do
-    fargs <- ytranslate t
-    go (fromIds fargs)
-      where
-        go [] = insertNode [] NothingF
-        go ((l', id) : xs) = go xs >>= (insertNode [l, l']) . (FunctionArgsF id)
+instance (FunctionCallFragment g y, YTrans g g y AddressT, YTrans g g y ValueT, YTrans g g y [ValueT]) => YTrans Cx.FunctionCall g y MemValT where
+  ytrans (Cx.FunctionCall _ fexpr fargs :&: l) = do
+    -- Check if there is a receiver
+    recvArgs <- case project' fargs of
+                  Just (Cx.FunctionArgumentList list) ->
+                    case project' list of
+                      Just (Cx.ConsF arg args) ->
+                        case project' arg of
+                          Just (Cx.ReceiverArg recv) -> ytranslate recv >>= \recv -> return $ Just (recv, getLabel arg, args)
+                          _ -> return Nothing
+                      _ -> return Nothing
 
-instance (Cx.PositionalArgument :<: g, YTrans g g y ValueT) => YTrans Cx.PositionalArgument g y ValueT where
+    fn <- case recvArgs of
+            Nothing -> ytranslate fexpr
+            Just (recv, l, _) -> ytranslate fexpr >>= insertNode [getLabel fexpr] . (DotF recv) >>= iQ [getLabel fexpr, l]
+
+    let argsTerm = case recvArgs of
+                     Nothing -> case project' fargs of
+                                  Just (Cx.FunctionArgumentList list) -> list
+                     Just (_, _, args) -> args
+
+    args <- ytranslate argsTerm >>= case recvArgs of
+                                      Nothing -> parseArgs . fromIds
+                                      Just (recv, l, _) -> parseArgs . ((l, recv) :) . fromIds
+
+    getMem >>= (insertNode [l]) . (FunctionCallF fn args) >>= updateMemVal
+    where
+      parseArgs [] = insertNode [] NothingF
+      parseArgs ((l, id) : xs) = parseArgs xs >>= (insertNode [l]) . (FunctionArgsF id)
+
+instance (FunctionCallFragment g y, YTrans g g y ValueT) => YTrans Cx.PositionalArgument g y ValueT where
   ytrans (Cx.PositionalArgument t :&: _) = ytranslate t
+
+-- Could be address or value, depending on whether the function has a receiver argument
+instance (FunctionCallFragment g y, YTrans g g y ValueT) => YTrans Cx.FunctionIdent g y ValueT where
+  ytrans (Cx.FunctionIdent t :&: _) = ytranslate t
+
+instance (FunctionCallFragment g y, YTrans g g y AddressT) => YTrans Cx.FunctionIdent g y AddressT where
+  ytrans (Cx.FunctionIdent t :&: _) = ytranslate t
 
 instance (Cx.FunctionDef :<: g, Cx.Ident :<: g,
           MemGenesisF :<: y, UnknownF :<: y, MemF :<: y, ValF :<: y, AssignF :<: y,

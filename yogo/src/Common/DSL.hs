@@ -112,6 +112,7 @@ instance SigToLangDSL ConstF where nodeDef _ = Just (nsCommon, "const", ["$const
 instance SigToLangDSL IdentF where nodeDef _ = Just (nsCommon, "ident", ["$name"], [anyStackLValue])
 instance SigToLangDSL SelF where nodeDef _ = Just (nsCommon, "sel", ["base", "offset"], [])
 instance SigToLangDSL AtF where nodeDef _ = Just (nsCommon, "at", ["ptr"], [])
+instance SigToLangDSL DotF where nodeDef _ = Just (nsCommon, "dot", ["base", "attr"], [])
 instance SigToLangDSL DerefF where nodeDef _ = Just (nsCommon, "deref", ["mem", "ref"], [])
 instance SigToLangDSL BinopF where nodeDef _ = Just (nsCommon, "binop", ["$op", "arg1", "arg2"], [])
 instance SigToLangDSL UnopF where nodeDef _ = Just (nsCommon, "unop", ["$op", "arg"], [])
@@ -190,6 +191,9 @@ instance (SelF :<: y) => NodeToGraphDSL SelF y where
 
 instance (AtF :<: y) => NodeToGraphDSL AtF y where
   nodeArgs (AtF ptr) = [idToDSL ptr]
+
+instance (DotF :<: y) => NodeToGraphDSL DotF y where
+  nodeArgs (DotF base attr) = [idToDSL base, idToDSL attr]
 
 instance (DerefF :<: y) => NodeToGraphDSL DerefF y where
   nodeArgs (DerefF mem ref) = [idToDSL mem, idToDSL ref]

@@ -77,18 +77,6 @@ instance YTrans Py.Op Py.MPythonSig YPythonSig OpT where
   ytrans (Py.NotIn _ :&: l) = insertNode [l] (PyOp PyNotIn)
   ytrans _ = error "Py.Op Not Implemented"
 
-instance YTrans Py.Expr Py.MPythonSig YPythonSig ValueT where
-  ytrans (Py.Int n _ _ :&: l) = insertNode [l] (ConstF (IntegerF n))
-  ytrans (Py.Var ident _ :&: l) = ytranslate ident >>= iQ [l]
-  ytrans (Py.Subscript m k _ :&: l) =
-    SelF <$> ytranslate m <*> ytranslate k >>= insertNode [l] >>= iQ [l]
-  ytrans (Py.BinaryOp op arg1 arg2 _ :&: l) =
-    BinopF <$> ytranslate op <*> ytranslate arg1 <*> ytranslate arg2 >>= insertNode [l]
-  ytrans (Py.UnaryOp op arg _ :&: l) =
-    UnopF <$> ytranslate op <*> ytranslate arg >>= insertNode [l]
-  ytrans (Py.Paren expr _ :&: _) = ytranslate expr
-  ytrans f = error "Py.expr Value Not Implemented"
-
 ytransLhs :: (MonadYogoPy m, YTrans Py.MPythonSig Py.MPythonSig YPythonSig [t])
           => [Label] -> Py.MPythonTermLab [t] -> m (PyID AddressT)
 ytransLhs labels t = do
@@ -116,7 +104,23 @@ instance YTrans Py.Expr Py.MPythonSig YPythonSig AddressT where
   ytrans (Py.Paren expr _ :&: _) = ytranslate expr
   -- TODO, make (x,) a list too
   ytrans (Py.Tuple t _ :&: l) = ytransListLV [l] t
+  ytrans (Py.Dot m k _ :&: l) =
+    DotF <$> ytranslate m <*> ytranslate k >>= insertNode [l]
   ytrans f = error "Py.expr AddressT Not Implemented"
+
+instance YTrans Py.Expr Py.MPythonSig YPythonSig ValueT where
+  ytrans (Py.Int n _ _ :&: l) = insertNode [l] (ConstF (IntegerF n))
+  ytrans (Py.Var ident _ :&: l) = ytranslate ident >>= iQ [l]
+  ytrans (Py.Subscript m k _ :&: l) =
+    SelF <$> ytranslate m <*> ytranslate k >>= insertNode [l] >>= iQ [l]
+  ytrans (Py.BinaryOp op arg1 arg2 _ :&: l) =
+    BinopF <$> ytranslate op <*> ytranslate arg1 <*> ytranslate arg2 >>= insertNode [l]
+  ytrans (Py.UnaryOp op arg _ :&: l) =
+    UnopF <$> ytranslate op <*> ytranslate arg >>= insertNode [l]
+  ytrans (Py.Dot m k _ :&: l) =
+    DotF <$> ytranslate m <*> ytranslate k >>= insertNode [l] >>= iQ [l]
+  ytrans (Py.Paren expr _ :&: _) = ytranslate expr
+  ytrans f = error "Py.expr Value Not Implemented"
 
 ytransChainComp :: (YTrans Py.MPythonSig Py.MPythonSig YPythonSig ValueT,
                     YTrans Py.MPythonSig Py.MPythonSig YPythonSig OpT,
@@ -204,6 +208,10 @@ instance YTrans Py.Module Py.MPythonSig YPythonSig ScopeT where
     _ :: PyID [StatementT] <- ytranslate body
     return Scope
 
+instance YTrans Py.DotLValue Py.MPythonSig YPythonSig AddressT where
+  ytrans (Py.DotLValue m k :&: l) =
+    DotF <$> ytranslate m <*> ytranslate k >>= insertNode [l]
+
 instance YTrans Py.SubscriptLValue Py.MPythonSig YPythonSig AddressT where
   ytrans (Py.SubscriptLValue m k :&: l) =
     SelF <$> ytranslate m <*> ytranslate k >>= insertNode [l]
@@ -226,7 +234,13 @@ instance YTrans Py.ExprIsRhs Py.MPythonSig YPythonSig ValueT where
 instance YTrans Py.ExprIsPositionalArgExp Py.MPythonSig YPythonSig ValueT where
   ytrans (Py.ExprIsPositionalArgExp t :&: _) = ytranslate t
 
+instance YTrans Py.ExprIsReceiver Py.MPythonSig YPythonSig ValueT where
+  ytrans (Py.ExprIsReceiver t :&: _) = ytranslate t
+
 instance YTrans Py.ExprIsFunctionExp Py.MPythonSig YPythonSig ValueT where
+  ytrans (Py.ExprIsFunctionExp t :&: _) = ytranslate t
+
+instance YTrans Py.ExprIsFunctionExp Py.MPythonSig YPythonSig AddressT where
   ytrans (Py.ExprIsFunctionExp t :&: _) = ytranslate t
 
 instance YTrans Py.FunctionCallIsExpr Py.MPythonSig YPythonSig ValueT where
