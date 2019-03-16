@@ -42,7 +42,6 @@ data FArgT
 -- Syntax types. Do not correspond to any node
 data OpT -- Operators
 data StatementT
-data ScopeT -- functions, modules
 
 type Depth = Int
 
@@ -51,6 +50,7 @@ data Primitive = IntegerF Integer | IntF Int | BoolF Bool | StringF String
 data CommonOp' = And | Or | Not
                | Exponent | Plus | Minus | Multiply
                | LessThan | GreaterThan | Equals | GreaterThanEquals | LessThanEquals | NotEquals
+               | Unknown
 
 -- Engine nodes. Provided by Yogo
 data AnyNode (e :: * -> *) t
@@ -163,12 +163,11 @@ data ID (f :: (* -> *) -> * -> *) t where
   ID :: Int -> ID f t
   IDs :: [(Label, ID f t)] -> ID f [t]
   Statement :: ID f StatementT
-  Scope :: ID f ScopeT
 
 instance Show (ID f t) where
   show (ID n) = "(ID " ++ show n ++ ")"
   show (IDs ids) = "[IDS " ++ (intercalate " " $ map show ids) ++ "]"
-  show Scope = "Scope"
+  show Statement = "Statement"
 
 fromIds :: ID f [t] -> [(Label, ID f t)]
 fromIds (IDs ids) = ids
@@ -210,11 +209,11 @@ newScope name = do
   file %= Map.insert name []
   insertNode [] MemGenesisF >>= pushMem
 
-endScope :: (MonadYogo f m) => m (ID f ScopeT)
+endScope :: (MonadYogo f m) => m ()
 endScope = do
   nameScope %= tail
   popMem
-  return Scope
+  return ()
 
 getCounter :: (MonadYogo f m) => m Int
 getCounter = counter += 1 >> use counter
@@ -278,9 +277,9 @@ updateMem mem = popMem >> pushMem mem
 updateMemVal :: (MonadYogo f m, MemF :<: f) => ID f MemValT -> m (ID f MemValT)
 updateMemVal memVal = iMemF [] memVal >> return memVal
 
-ytransUnknown :: (CanYTrans f, MonadYogo y m,
+ytransUnknown :: (MonadYogo y m,
                   UnknownF :<: y, MemF :<: y) => YTranslateM m f g y MemValT
-ytransUnknown (f :&: l) = getMem >>= (insertNode [l]) . UnknownF >>= updateMemVal
+ytransUnknown (_ :&: l) = getMem >>= (insertNode [l]) . UnknownF >>= updateMemVal
 
 -- s is needed, otherwise cause Incoherent Instances when f is a signature type
 class (CanYTrans f) => YTrans f g y t where
@@ -372,24 +371,30 @@ instance (FunctionCallFragment g y, YTrans g g y ValueT) => YTrans Cx.FunctionId
 instance (FunctionCallFragment g y, YTrans g g y AddressT) => YTrans Cx.FunctionIdent g y AddressT where
   ytrans (Cx.FunctionIdent t :&: _) = ytranslate t
 
-instance (Cx.FunctionDef :<: g, Cx.Ident :<: g,
-          MemGenesisF :<: y, UnknownF :<: y, MemF :<: y, ValF :<: y, AssignF :<: y,
-          YTrans g g y [StatementT], YTrans g g y AddressT
+type ScopeFragment f y = (Cx.Ident :<: f,
+                          MemGenesisF :<: y, UnknownF :<: y,
+                          MemF :<: y, ValF :<: y, AssignF :<: y)
+
+ytransScope :: (ScopeFragment g y, MonadYogo y m, YTrans g g y [StatementT], YTrans g g y AddressT)
+            => [Label] -> TermLab g lname -> TermLab g lbody -> m (ID y StatementT)
+ytransScope labels name body = do
+  let name' = case project' name of
+                Just (Cx.Ident s) -> s
+                _ -> error "ytransScope: unexpected name"
+  scopeName <- liftM (Name . (name' ++) . show) getCounter
+  newScope scopeName
+  _ :: ID y [StatementT] <- ytranslate body
+  endScope
+  before <- getMem
+  rvalue <- ytransUnknown (unTerm body) >>= insertNode labels . ValF
+  after <- getMem
+  addEntry $ YGraphEq (E before) (E after)
+  AssignF rvalue <$> ytranslate name <*> getMem >>= insertNode labels
+  return Statement
+
+instance (ScopeFragment g y, Cx.FunctionDef :<: g, YTrans g g y [StatementT], YTrans g g y AddressT
          ) => YTrans Cx.FunctionDef g y StatementT where
-  ytrans (Cx.FunctionDef _ fname _ fbody :&: l) = do
-    let name' = case project' fname of
-                  Just (Cx.Ident s) -> s
-                  _ -> error "Cx.FunctionDef: unexpected function name"
-    scopeName <- liftM (Name . (name' ++) . show) getCounter
-    newScope scopeName
-    _ :: ID y [StatementT] <- ytranslate fbody
-    endScope
-    before <- getMem
-    rvalue <- ytransUnknown (unTerm fbody) >>= insertNode [l] . ValF
-    after <- getMem
-    addEntry $ YGraphEq (E before) (E after)
-    AssignF rvalue <$> ytranslate fname <*> getMem >>= insertNode [l]
-    return Statement
+  ytrans (Cx.FunctionDef _ fname _ fbody :&: l) = ytransScope [l] fname fbody
 
 instance (Cx.Block :<: g, YTrans g g y [StatementT]) => YTrans Cx.Block g y [StatementT] where
   ytrans (Cx.Block t _ :&: l) = ytranslate t
