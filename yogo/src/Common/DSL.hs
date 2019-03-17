@@ -107,7 +107,7 @@ instance SigToLangDSL UnknownF where nodeDef _ = Just (nsCommon, "unknown", ["sr
 instance SigToLangDSL MemF where nodeDef _ = Just (nsCommon, "mem", ["src"], [anyMem])
 instance SigToLangDSL ValF where nodeDef _ = Just (nsCommon, "val", ["src"], [])
 instance SigToLangDSL NothingF where nodeDef _ = Just (nsCommon, "nothing", [], [])
-instance SigToLangDSL TempF where nodeDef _ = Just (nsCommon, "temp", ["temp-id", "depth"], [])
+instance SigToLangDSL TempF where nodeDef _ = Just (nsCommon, "temp", ["$uid", "depth"], [])
 instance SigToLangDSL ConstF where nodeDef _ = Just (nsCommon, "const", ["$const"], [])
 instance SigToLangDSL IdentF where nodeDef _ = Just (nsCommon, "ident", ["$name"], [anyStackLValue])
 instance SigToLangDSL SelF where nodeDef _ = Just (nsCommon, "sel", ["base", "offset"], [])
@@ -178,7 +178,7 @@ instance (NothingF :<: y) => NodeToGraphDSL NothingF y where
   nodeArgs _ = []
 
 instance (TempF :<: y) => NodeToGraphDSL TempF y where
-  nodeArgs (TempF tempId depth) = [show tempId, show depth]
+  nodeArgs (TempF uid depth) = [show uid, show depth]
 
 instance (ConstF :<: y) => NodeToGraphDSL ConstF y where
   nodeArgs (ConstF p) = [primitiveToDSL p]

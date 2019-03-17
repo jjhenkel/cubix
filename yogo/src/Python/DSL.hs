@@ -21,6 +21,10 @@ instance SigToLangDSL PyListLV where nodeDef _ = Just (nsPy, "list-lv", ["lv", "
 instance SigToLangDSL PyArgKeyword where nodeDef _ = Just (nsPy, "arg-kw", ["param", "val"], [])
 instance SigToLangDSL PyArgSplat where nodeDef _ = Just (nsPy, "args", ["val"], [])
 instance SigToLangDSL PyArgKWSplat where nodeDef _ = Just (nsPy, "kwargs", ["val"], [])
+instance SigToLangDSL PyTuple where nodeDef _ = Just (nsPy, "tuple", ["head", "rest"], [])
+instance SigToLangDSL PyList where nodeDef _ = Just (nsPy, "list", ["head", "rest"], [])
+instance SigToLangDSL PyDict where nodeDef _ = Just (nsPy, "dict", ["$uid", "depth"], [])
+instance SigToLangDSL PySet where nodeDef _ = Just (nsPy, "set", ["$uid", "depth"], [])
 instance SigToLangDSL PyOp where nodeDef _ = Nothing
 
 instance NodeToGraphDSL PyLhs YPythonSig where
@@ -41,6 +45,19 @@ instance NodeToGraphDSL PyArgSplat YPythonSig where
 
 instance NodeToGraphDSL PyArgKWSplat YPythonSig where
   nodeArgs (PyArgKWSplat val) = [idToDSL val]
+
+instance NodeToGraphDSL PyTuple YPythonSig where
+  nodeArgs (PyTuple head rest) = [idToDSL head, idToDSL rest]
+
+instance NodeToGraphDSL PyList YPythonSig where
+  nodeArgs (PyList head rest) = [idToDSL head, idToDSL rest]
+
+instance NodeToGraphDSL PySet YPythonSig where
+  nodeArgs (PySet head rest) = [idToDSL head, idToDSL rest]
+
+instance NodeToGraphDSL PyDict YPythonSig where
+  nodeArgs (PyDict key value rest) = [idToDSL key, idToDSL value, idToDSL rest]
+
 
 pyOpToDSL :: PyOp' -> String
 pyOpToDSL PyIn = ":py-in"

@@ -45,7 +45,7 @@ data StatementT
 
 type Depth = Int
 
-data Primitive = IntegerF Integer | IntF Int | BoolF Bool | StringF String
+data Primitive = IntegerF Integer | IntF Int | BoolF Bool | StringF String | NullF
 
 data CommonOp' = And | Or | Not
                | Exponent | Plus | Minus | Multiply
