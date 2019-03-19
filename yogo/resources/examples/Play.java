@@ -1,5 +1,5 @@
 class Play {
     int main() {
-        test(0);
+        x = 1;
     }
 }

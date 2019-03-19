@@ -17,29 +17,36 @@ import System.Process.Typed
 
 import Cubix.Language.Info
 import Cubix.ParsePretty
+import Cubix.Language.Java.Parametric.Common as JCommon
 import Cubix.Language.Python.Parametric.Common as PCommon
 
 import Common.Trans
 import Python.Trans as Py
+import Java.Trans as J
 import DSL
 
 import Data.Proxy ( Proxy(..) )
 
 data LangProj = PythonProj (Project MPythonSig)
+              | JavaProj (Project MJavaSig)
 data YLangProj = YPythonProj (YProject Py.YPythonSig)
+               | YJavaProj (YProject J.YJavaSig)
 
 parseProj :: LabelGen -> String -> [FilePath] -> IO (Maybe LangProj)
 parseProj gen "python"     = (return . maybe Nothing (Just . PythonProj)) <=< parseProject gen parseFile
+parseProj gen "java"     = (return . maybe Nothing (Just . JavaProj)) <=< parseProject gen parseFile
 parseProj _   _            = error "Unrecognized language. Must be one of: c, java, javascript, lua, python"
 
 putProj :: LangProj -> IO ()
 putProj (PythonProj p) = putProject (prettyPython     . fromJust . dynProj . stripA) p
+putProj (JavaProj   p) = putProject (prettyJava       . fromJust . dynProj . stripA) p
 
 lowercase :: String -> String
 lowercase = map toLower
 
 runYogo :: LangProj -> YLangProj
 runYogo (PythonProj p) = YPythonProj (Py.toGraphPython p)
+runYogo (JavaProj p) = YJavaProj (J.toGraphJava p)
 
 writeTmp :: FilePath -> String -> IO FilePath
 writeTmp f s = do
@@ -51,7 +58,8 @@ writeTmp f s = do
 projToFiles :: YLangProj -> IO (Map FilePath FilePath)
 projToFiles prj = do
   let graphFiles = (case prj of
-                      YPythonProj p -> generateGraphFiles p)
+                      YPythonProj p -> generateGraphFiles p
+                      YJavaProj   p -> generateGraphFiles p)
   mapM (\(k, (f, s)) -> writeTmp f s >>= return . ((,) k)) (Map.toList graphFiles) >>= return . Map.fromList
 
 writeLangFiles :: Namespace -> Map Namespace String -> IO [FilePath]
@@ -61,7 +69,8 @@ writeLangFiles ns langFiles = do
   return [fileGeneric, fileLang]
 
 langToFiles :: String -> IO [FilePath]
-langToFiles "python" = writeLangFiles nsPy $ generateLangFiles (Proxy :: Proxy Py.YPythonSig)
+langToFiles "python" = writeLangFiles nsPy   $ generateLangFiles (Proxy :: Proxy Py.YPythonSig)
+langToFiles "java"   = writeLangFiles nsJava $ generateLangFiles (Proxy :: Proxy J.YJavaSig)
 langToFiles _ = error "Unsupported language"
 
 

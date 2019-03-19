@@ -66,11 +66,11 @@ data PyArgKWSplat e l where
 
 data PyTuple e l where
   -- PyTuple head rest
-  PyTuple :: e ValueT -> e ValueT -> PyTuple e ValueT
+  PyTuple :: e l -> e l -> PyTuple e l
 
 data PyList e l where
   -- PyList head rest
-  PyList :: e ValueT -> e ValueT -> PyList e ValueT
+  PyList :: e l -> e l -> PyList e l
 
 data PyDict (e :: * -> *) l where
   -- key, value, dict
@@ -85,7 +85,6 @@ data PyOp (e :: * -> *) t where
 
 type YPythonSig = PySet :+: PyDict :+: PyList :+: PyTuple :+: PyArgKWSplat :+: PyArgSplat :+:PyArgKeyword :+: PyOp :+: PyListLV :+: PyLhs :+: YGenericSig
 type PyID t = ID YPythonSig t
-type YTranslatePyM m f t = GTranslateM m ((f :&: Label) Py.MPythonTermLab) (ID YPythonSig t)
 
 type MonadYogoPy m = (MonadYogo YPythonSig m)
 type CanYTransPy f = (CanYTrans f)
@@ -138,7 +137,6 @@ instance YTrans Py.Expr Py.MPythonSig YPythonSig AddressT where
   ytrans (Py.Dot m k _ :&: l) =
     DotF <$> ytranslate m <*> ytranslate k >>= insertNode [l]
   ytrans f = error "Py.expr AddressT Not Implemented"
-
 
 ytransList :: (MonadYogoPy m, f :<: YPythonSig, YTrans Py.MPythonSig Py.MPythonSig YPythonSig [t])
            => [Label]
@@ -271,6 +269,10 @@ instance YTrans Py.Statement Py.MPythonSig YPythonSig StatementT where
              >>= insertNode [l]
     AssignF binop lvalue <$> getMem >>= insertNode [l] >>= updateMemVal
     return Statement
+  ytrans t@(Py.Try body _ _ _ _ :&: l) = do
+    _ :: PyID [StatementT] <- ytranslate body
+    ytransUnknown t -- for else/excepts/etc.
+    return Statement
   ytrans f = traceM "Unknown statement" >> ytransUnknown f >> return Statement
 
 instance YTrans Py.Module Py.MPythonSig YPythonSig StatementT where
@@ -297,6 +299,9 @@ instance YTrans Py.PythonArg Py.MPythonSig YPythonSig ValueT where
 
 instance YTrans Py.PyLhs Py.MPythonSig YPythonSig AddressT where
   ytrans (Py.PyLhs t :&: l) = ytransLhs [l] PyLhs t
+
+instance YTrans Py.TupleLValue Py.MPythonSig YPythonSig AddressT where
+  ytrans (Py.TupleLValue t :&: l) = ytransLhs [l] PyTuple t
 
 instance YTrans Py.PyBlock Py.MPythonSig YPythonSig [StatementT] where
   ytrans (Py.PyBlock _ t :&: _) = ytranslate t

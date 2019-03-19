@@ -5,6 +5,7 @@ module DSL (
 
   , nsCommon
   , nsPy
+  , nsJava
   ) where
 
 import Data.Proxy ( Proxy(..) )
@@ -19,6 +20,7 @@ import qualified Data.Map as Map
 import Common.Trans
 import Common.DSL
 import Python.DSL
+import Java.DSL
 
 generateNodeLine :: NodeDef -> String
 generateNodeLine (_, node, args, derives) = "(defnode " ++ node ++ " [" ++ (intercalate " " args) ++ "] " ++ (intercalate " " derives) ++ ")"

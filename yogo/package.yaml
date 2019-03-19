@@ -35,6 +35,8 @@ library:
     - Common.DSL
     - Python.Trans
     - Python.DSL
+    - Java.Trans
+    - Java.DSL
     - DSL
 
 executables:
