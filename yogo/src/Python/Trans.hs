@@ -350,7 +350,7 @@ instance YTrans Py.PyBlockIsFunctionBody Py.MPythonSig YPythonSig [StatementT] w
 
 ytransPythonModule :: (MonadYogoPy m)
                    => TranslateM m Py.MPythonTermLab Py.ModuleL (ID YPythonSig StatementT)
-ytransPythonModule = ytranslate
+ytransPythonModule t = ytranslate t
 
 initState :: YogoState YPythonSig
 initState = YogoState [] [] Map.empty 0 0

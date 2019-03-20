@@ -13,5 +13,9 @@ import Common.DSL
 import Common.Trans
 import Java.Trans
 
+instance SigToLangDSL JBlank where nodeDef _ = Just (nsJava, "blank", [], [])
+instance NodeToGraphDSL JBlank YJavaSig where
+  nodeArgs _ = []
+
 nsJava :: Namespace
 nsJava = "java"

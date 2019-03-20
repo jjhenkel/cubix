@@ -1,5 +1,5 @@
 class Play {
     int main() {
-        x = 1;
+        int x, y = 1;
     }
 }

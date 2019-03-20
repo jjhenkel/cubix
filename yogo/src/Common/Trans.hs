@@ -321,10 +321,17 @@ instance (Cx.ListF :<: g, YTrans g g y t) => YTrans Cx.ListF g y [t] where
 instance (Cx.Ident :<: g, IdentF :<: y) => YTrans Cx.Ident g y AddressT where
   ytrans (Cx.Ident name :&: l) = insertNode [l] (IdentF name)
 
-instance (Cx.Assign :<: g, Cx.AssignOpEquals :<: g, AssignF :<: y, MemF :<: y, YTrans g g y AddressT, YTrans g g y ValueT) => YTrans Cx.Assign g y MemValT where
+type AssignFragment f y = (Cx.Assign :<: f, Cx.AssignOpEquals :<: f, AssignF :<: y, MemF :<: y)
+
+ytransAssign :: (MonadYogo y m, AssignFragment g y, YTrans g g y AddressT, YTrans g g y ValueT)
+             => [Label] -> TermLab g l1 -> TermLab g l2
+             -> m (ID y MemValT)
+ytransAssign labels rvalue lvalue = do
+  AssignF <$> ytranslate rvalue <*> ytranslate lvalue <*> getMem >>= insertNode labels >>= updateMemVal
+
+instance (AssignFragment g y, YTrans g g y AddressT, YTrans g g y ValueT) => YTrans Cx.Assign g y MemValT where
   -- Assumes to be :=. Not true outside of Python
-  ytrans (Cx.Assign lv (project' -> Just (Cx.AssignOpEquals)) rv :&: l) =
-    AssignF <$> ytranslate rv <*> ytranslate lv <*> getMem >>= insertNode [l] >>= updateMemVal
+  ytrans (Cx.Assign lv (project' -> Just (Cx.AssignOpEquals)) rv :&: l) = ytransAssign [l] rv lv
 
 type FunctionCallFragment f y = (Cx.FunctionCall :<: f, Cx.ListF :<: f, Cx.ReceiverArg :<: f,
                                  Cx.FunctionArgumentList :<: f, Cx.PositionalArgument :<: f,
@@ -370,6 +377,23 @@ instance (FunctionCallFragment g y, YTrans g g y ValueT) => YTrans Cx.FunctionId
 
 instance (FunctionCallFragment g y, YTrans g g y AddressT) => YTrans Cx.FunctionIdent g y AddressT where
   ytrans (Cx.FunctionIdent t :&: _) = ytranslate t
+
+instance (Cx.MultiLocalVarDecl :<: g, YTrans g g y [AddressT]) => YTrans Cx.MultiLocalVarDecl g y StatementT where
+  ytrans (Cx.MultiLocalVarDecl _ decls :&: _) = do
+    _ :: ID y [StatementT] <- ytranslate decls
+    return Statement
+
+instance (Cx.SingleLocalVarDecl :<: g, Cx.OptLocalVarInit :<: g, AssignFragment g y,
+          YTrans g g y AddressT, YTrans g g y ValueT) => YTrans Cx.SingleLocalVarDecl g y StatementT where
+  ytrans (Cx.SingleLocalVarDecl _ binder (project' -> Just Cx.NoLocalVarInit) :&: _) = do
+    _ :: ID y AddressT <- ytranslate binder
+    return Statement
+  ytrans (Cx.SingleLocalVarDecl _ binder (project' -> Just (Cx.JustLocalVarInit init)) :&: l) = do
+    ytransAssign [l] binder init
+    return Statement
+
+instance (Cx.IdentIsVarDeclBinder :<: g, YTrans g g y AddressT) => YTrans Cx.IdentIsVarDeclBinder g y AddressT where
+  ytrans (Cx.IdentIsVarDeclBinder t :&: _) = ytranslate t
 
 type ScopeFragment f y = (Cx.Ident :<: f,
                           MemGenesisF :<: y, UnknownF :<: y,

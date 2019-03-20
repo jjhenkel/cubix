@@ -2,6 +2,8 @@
 
 module Main where
 
+import Debug.Trace
+
 import Control.Monad ( liftM, (<=<) )
 import Control.Concurrent.STM (atomically)
 import qualified Data.ByteString.Lazy.Char8 as L8
@@ -64,7 +66,9 @@ projToFiles prj = do
 
 writeLangFiles :: Namespace -> Map Namespace String -> IO [FilePath]
 writeLangFiles ns langFiles = do
+  traceM "1"
   fileLang <- writeTmp ("lang-" ++ ns) (fromJust $ Map.lookup ns langFiles)
+  traceM "2"
   fileGeneric <- writeTmp "lang-generic" (fromJust $ Map.lookup "generic" langFiles)
   return [fileGeneric, fileLang]
 
