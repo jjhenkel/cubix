@@ -86,10 +86,61 @@ data PyOp (e :: * -> *) t where
 type YPythonSig = PySet :+: PyDict :+: PyList :+: PyTuple :+: PyArgKWSplat :+: PyArgSplat :+:PyArgKeyword :+: PyOp :+: PyListLV :+: PyLhs :+: YGenericSig
 type PyID t = ID YPythonSig t
 
+type CanYTrans f = (HFunctor f, ShowHF f, Typeable f)
 type MonadYogoPy m = (MonadYogo YPythonSig m)
-type CanYTransPy f = (CanYTrans f)
 
-instance YTrans Py.Op Py.MPythonSig YPythonSig OpT where
+class (CanYTrans f) => YTrans f t where
+  ytrans :: (MonadYogoPy m) => YTransM m f Py.MPythonSig YPythonSig t
+
+ytranslate :: (MonadYogoPy m, YTrans Py.MPythonSig t) => YTransTermM m Py.MPythonSig YPythonSig t
+ytranslate f = (ytrans . unTerm) f
+
+-- ----------
+-- Generic
+-- ----------
+
+instance {-# OVERLAPPABLE #-} (CanYTrans f) => YTrans f t where
+  ytrans t = do
+    traceM $ show $ typeRep (Proxy :: Proxy f)
+    mzero
+  -- ytrans = error $ show (typeRep (Proxy :: Proxy f))
+
+instance {-# OVERLAPPING #-} (YTrans f1 t, YTrans f2 t) => YTrans (f1 :+: f2) t where
+  ytrans = caseH' ytrans ytrans
+
+instance (YTrans Py.MPythonSig t) => YTrans Cx.ListF [t] where
+  ytrans = ytransList ytranslate ytranslate
+
+instance YTrans Cx.Ident AddressT where
+  ytrans (Cx.Ident name :&: l) = insertNode [l] (IdentF name)
+
+instance YTrans Cx.Assign MemValT where
+  ytrans = ytransAssign ytranslate ytranslate
+
+instance YTrans Cx.FunctionCall MemValT where
+  ytrans = ytransFCall ytranslate ytranslate ytranslate
+
+instance YTrans Cx.PositionalArgument ValueT where
+  ytrans (Cx.PositionalArgument t :&: _) = ytranslate t
+
+-- Could be address or value, depending on whether the function has a receiver argument
+instance YTrans Cx.FunctionIdent ValueT where
+  ytrans (Cx.FunctionIdent t :&: _) = ytranslate t
+
+instance YTrans Cx.FunctionIdent AddressT where
+  ytrans (Cx.FunctionIdent t :&: _) = ytranslate t
+
+instance YTrans Cx.FunctionDef StatementT where
+  ytrans (Cx.FunctionDef _ fname _ fbody :&: l) = ytranslateScope ytranslate ytranslate [l] fname fbody
+
+instance YTrans Cx.Block [StatementT] where
+  ytrans (Cx.Block t _ :&: l) = ytranslate t
+
+-- ----------
+-- Python specific
+-- ----------
+
+instance YTrans Py.Op OpT where
   ytrans (Py.And _ :&: l) = insertNode [l] (CommonOp And)
   ytrans (Py.Or _ :&: l) = insertNode [l] (CommonOp Or)
   ytrans (Py.Not _ :&: l) = insertNode [l] (CommonOp Not)
@@ -107,15 +158,15 @@ instance YTrans Py.Op Py.MPythonSig YPythonSig OpT where
   ytrans (Py.NotIn _ :&: l) = insertNode [l] (PyOp PyNotIn)
   ytrans (_ :&: l) = insertNode [l] (CommonOp Unknown)
 
-instance YTrans Py.PAssignOp Py.MPythonSig YPythonSig OpT where
+instance YTrans Py.PAssignOp OpT where
   ytrans (Py.PlusAssign _ :&: l) = insertNode [l] (CommonOp Plus)
   ytrans (Py.MinusAssign _ :&: l) = insertNode [l] (CommonOp Minus)
   ytrans (Py.MultAssign _ :&: l) = insertNode [l] (CommonOp Multiply)
   ytrans (_ :&: l) = insertNode [l] (CommonOp Unknown)
 
-ytransLhs :: (MonadYogoPy m, f :<: YPythonSig, YTrans Py.MPythonSig Py.MPythonSig YPythonSig [t])
+ytransLhs :: (MonadYogoPy m, f :<: YPythonSig)
           => [Label]
-          -> (ID YPythonSig AddressT -> ID YPythonSig AddressT -> f (ID YPythonSig) AddressT)
+          -> (PyID AddressT -> PyID AddressT -> f (ID YPythonSig) AddressT)
           -> Py.MPythonTermLab [t]
           -> m (PyID AddressT)
 ytransLhs labels constructor t = do
@@ -128,7 +179,7 @@ ytransLhs labels constructor t = do
       go [(l, id)] = return id
       go ((l, id) : xs) = go xs >>= (insertNode (l : labels)) . (constructor id)
 
-instance YTrans Py.Expr Py.MPythonSig YPythonSig AddressT where
+instance YTrans Py.Expr AddressT where
   ytrans (Py.Var ident _ :&: l) = ytranslate ident
   ytrans (Py.Paren expr _ :&: _) = ytranslate expr
   -- TODO, make (x,) a list too
@@ -138,12 +189,12 @@ instance YTrans Py.Expr Py.MPythonSig YPythonSig AddressT where
     DotF <$> ytranslate m <*> ytranslate k >>= insertNode [l]
   ytrans f = error "Py.expr AddressT Not Implemented"
 
-ytransList :: (MonadYogoPy m, f :<: YPythonSig, YTrans Py.MPythonSig Py.MPythonSig YPythonSig [t])
-           => [Label]
-           -> (ID YPythonSig ValueT -> ID YPythonSig ValueT -> f (ID YPythonSig) ValueT)
-           -> Py.MPythonTermLab [t]
-           -> m (PyID ValueT)
-ytransList labels constructor t = do
+ytransPyList :: (MonadYogoPy m, f :<: YPythonSig)
+             => [Label]
+             -> (ID YPythonSig ValueT -> ID YPythonSig ValueT -> f (ID YPythonSig) ValueT)
+             -> Py.MPythonTermLab [t]
+             -> m (PyID ValueT)
+ytransPyList labels constructor t = do
   lvalues <- ytranslate t
   go (fromIds lvalues)
     where
@@ -152,7 +203,7 @@ ytransList labels constructor t = do
         insertNode [] $ constructor nothing nothing
       go ((l, id) : xs) = go xs >>= (insertNode (l : labels)) . (constructor id)
 
-ytransDict :: (MonadYogoPy m, YTrans Py.MPythonSig Py.MPythonSig YPythonSig ValueT)
+ytransDict :: (MonadYogoPy m)
            => [Label]
            -> Py.MPythonTermLab [t]
            -> m (PyID ValueT)
@@ -166,7 +217,7 @@ ytransDict labels t@(project' -> Just (Cx.ConsF pair rest)) =
       >>= insertNode ((getLabel t) : labels)
     _ -> error "ytransDict: not expecting anything other than DictMappingPair"
 
-instance YTrans Py.Expr Py.MPythonSig YPythonSig ValueT where
+instance YTrans Py.Expr ValueT where
   ytrans (Py.Int n _ _ :&: l) = insertNode [l] (ConstF (IntegerF n))
   ytrans (Py.LongInt n _ _ :&: l) = insertNode [l] (ConstF (IntegerF n))
   ytrans (Py.Bool p _ :&: l) = insertNode [l] (ConstF (BoolF p))
@@ -180,16 +231,14 @@ instance YTrans Py.Expr Py.MPythonSig YPythonSig ValueT where
     UnopF <$> ytranslate op <*> ytranslate arg >>= insertNode [l]
   ytrans (Py.Dot m k _ :&: l) =
     DotF <$> ytranslate m <*> ytranslate k >>= insertNode [l] >>= iQ [l]
-  ytrans (Py.Tuple t _ :&: l) = ytransList [l] PyTuple t
-  ytrans (Py.List t _ :&: l) = ytransList [l] PyList t
-  ytrans (Py.Set t _ :&: l) = ytransList [l] PySet t
+  ytrans (Py.Tuple t _ :&: l) = ytransPyList [l] PyTuple t
+  ytrans (Py.List t _ :&: l) = ytransPyList [l] PyList t
+  ytrans (Py.Set t _ :&: l) = ytransPyList [l] PySet t
   ytrans (Py.Dictionary t _ :&: l) = ytransDict [l] t
   ytrans (Py.Paren expr _ :&: _) = ytranslate expr
-  ytrans f@(_ :&: l) = traceM "Unknown Py.Expr ValueT" >> ytransUnknown f >>= insertNode [l] . ValF
+  ytrans (_ :&: l) = traceM "Unknown Py.Expr ValueT" >> iUnknownF [l] >>= insertNode [l] . ValF
 
-ytransChainComp :: (YTrans Py.MPythonSig Py.MPythonSig YPythonSig ValueT,
-                    YTrans Py.MPythonSig Py.MPythonSig YPythonSig OpT,
-                    MonadYogoPy m)
+ytransChainComp :: (MonadYogoPy m)
                 => Label -> PyID OpT -> PyID ValueT -> TermLab Py.MPythonSig Py.PyCompL
                 -> m (PyID ValueT)
 ytransChainComp l op1 arg1 t@(project' -> Just (Py.PyBaseComp op2 arg2 arg3)) = do
@@ -209,7 +258,7 @@ ytransChainComp l op1 arg1 t@(project' -> Just (Py.PyChainComp op2 arg2 comp)) =
   and <- insertNode [] $ CommonOp And
   insertNode [l] $ BinopF and binop1 binop2
 
-instance YTrans Py.PyComp Py.MPythonSig YPythonSig ValueT where
+instance YTrans Py.PyComp ValueT where
   ytrans (Py.PyBaseComp op arg1 arg2 :&: l) =
     BinopF <$> ytranslate op <*> ytranslate arg1 <*> ytranslate arg2 >>= insertNode [l]
   ytrans (Py.PyChainComp op arg comp :&: l) = do
@@ -217,7 +266,7 @@ instance YTrans Py.PyComp Py.MPythonSig YPythonSig ValueT where
     arg <- ytranslate arg
     ytransChainComp l op arg comp
 
-ytransConditional :: (YTrans Py.MPythonSig Py.MPythonSig YPythonSig [StatementT], MonadYogoPy m)
+ytransConditional :: (MonadYogoPy m)
                   => Label
                   -> TermLab Py.MPythonSig [(Py.ExprL, [Py.StatementL])]
                   -> TermLab Py.MPythonSig [Py.StatementL]
@@ -237,7 +286,7 @@ ytransConditional condLabel t@(project' -> Just (Cx.ConsF guard xs)) condElse =
       updateMem memCond
     Nothing -> error "Unexpected error in ytransConditional"
 
-instance YTrans Py.Statement Py.MPythonSig YPythonSig StatementT where
+instance YTrans Py.Statement StatementT where
   ytrans (Py.StmtExpr expr _ :&: _) =
     ytranslate expr >>= \(_ :: PyID ValueT) -> return Statement
   ytrans (Py.Conditional condGuards condElse _ :&: l) =
@@ -248,7 +297,7 @@ instance YTrans Py.Statement Py.MPythonSig YPythonSig StatementT where
     _ :: PyID [StatementT] <- ytranslate whileBody
     exitLoop [l] temp cond
     case project' whileElse of
-      Just f@(Cx.ConsF _ _) -> ytransUnknown (f :&: getLabel whileElse) >> return Statement
+      Just f@(Cx.ConsF _ _) -> iUnknownF [getLabel whileElse] >> return Statement
       _ -> return Statement
   ytrans (Py.For targets generator body forElse _ :&: l) = do
     generator' <- ytranslate generator
@@ -260,7 +309,7 @@ instance YTrans Py.Statement Py.MPythonSig YPythonSig StatementT where
     _ :: PyID [StatementT] <- ytranslate body
     exitLoop [l] temp cond
     case project' forElse of
-      Just f@(Cx.ConsF _ _) -> ytransUnknown (f :&: getLabel forElse) >> return Statement
+      Just f@(Cx.ConsF _ _) -> iUnknownF [getLabel forElse] >> return Statement
       _ -> return Statement
   ytrans (Py.Pass _ :&: _) = return Statement
   ytrans (Py.AugmentedAssign to op expr _ :&: l) = do
@@ -271,85 +320,84 @@ instance YTrans Py.Statement Py.MPythonSig YPythonSig StatementT where
     return Statement
   ytrans t@(Py.Try body _ _ _ _ :&: l) = do
     _ :: PyID [StatementT] <- ytranslate body
-    ytransUnknown t -- for else/excepts/etc.
+    iUnknownF [l] -- for else/excepts/etc.
     return Statement
-  ytrans f = traceM "Unknown statement" >> ytransUnknown f >> return Statement
+  ytrans (_ :&: l) = traceM "Unknown statement" >> iUnknownF [l] >> return Statement
 
-instance YTrans Py.Module Py.MPythonSig YPythonSig StatementT where
+instance YTrans Py.Module StatementT where
   ytrans (Py.Module body :&: _) = do
     newScope $ Name "Module"
     _ :: PyID [StatementT] <- ytranslate body
     return Statement
 
-instance YTrans Py.PyClass Py.MPythonSig YPythonSig StatementT where
-  ytrans (Py.PyClass cname _ cbody :&: l) = ytransScope [l] cname cbody
+instance YTrans Py.PyClass StatementT where
+  ytrans (Py.PyClass cname _ cbody :&: l) = ytranslateScope ytranslate ytranslate [l] cname cbody
 
-instance YTrans Py.DotLValue Py.MPythonSig YPythonSig AddressT where
+instance YTrans Py.DotLValue AddressT where
   ytrans (Py.DotLValue m k :&: l) =
     DotF <$> ytranslate m <*> ytranslate k >>= insertNode [l]
 
-instance YTrans Py.SubscriptLValue Py.MPythonSig YPythonSig AddressT where
+instance YTrans Py.SubscriptLValue AddressT where
   ytrans (Py.SubscriptLValue m k :&: l) =
     SelF <$> ytranslate m <*> ytranslate k >>= insertNode [l]
 
-instance YTrans Py.PythonArg Py.MPythonSig YPythonSig ValueT where
+instance YTrans Py.PythonArg ValueT where
   ytrans (Py.PythonArgSplat val :&: l) = PyArgSplat <$> ytranslate val >>= insertNode [l]
   ytrans (Py.PythonArgKeyword param val :&: l) = PyArgKeyword <$> ytranslate param <*> ytranslate val >>= insertNode [l]
   ytrans (Py.PythonArgKWSplat val :&: l) = PyArgKWSplat <$> ytranslate val >>= insertNode [l]
 
-instance YTrans Py.PyLhs Py.MPythonSig YPythonSig AddressT where
+instance YTrans Py.PyLhs AddressT where
   ytrans (Py.PyLhs t :&: l) = ytransLhs [l] PyLhs t
 
-instance YTrans Py.TupleLValue Py.MPythonSig YPythonSig AddressT where
+instance YTrans Py.TupleLValue AddressT where
   ytrans (Py.TupleLValue t :&: l) = ytransLhs [l] PyTuple t
 
-instance YTrans Py.PyBlock Py.MPythonSig YPythonSig [StatementT] where
+instance YTrans Py.PyBlock [StatementT] where
   ytrans (Py.PyBlock _ t :&: _) = ytranslate t
 
-instance YTrans Py.IdentIsIdent Py.MPythonSig YPythonSig AddressT where
+instance YTrans Py.IdentIsIdent AddressT where
   ytrans (Py.IdentIsIdent t :&: _) = ytranslate t
 
-instance YTrans Py.IdentIsPyLValue Py.MPythonSig YPythonSig AddressT where
+instance YTrans Py.IdentIsPyLValue AddressT where
   ytrans (Py.IdentIsPyLValue t :&: _) = ytranslate t
 
-instance YTrans Py.ExprIsRhs Py.MPythonSig YPythonSig ValueT where
+instance YTrans Py.ExprIsRhs ValueT where
   ytrans (Py.ExprIsRhs t :&: _) = ytranslate t
 
-instance YTrans Py.ExprIsPositionalArgExp Py.MPythonSig YPythonSig ValueT where
+instance YTrans Py.ExprIsPositionalArgExp ValueT where
   ytrans (Py.ExprIsPositionalArgExp t :&: _) = ytranslate t
 
-instance YTrans Py.ExprIsReceiver Py.MPythonSig YPythonSig ValueT where
+instance YTrans Py.ExprIsReceiver ValueT where
   ytrans (Py.ExprIsReceiver t :&: _) = ytranslate t
 
-instance YTrans Py.ExprIsFunctionExp Py.MPythonSig YPythonSig ValueT where
+instance YTrans Py.ExprIsFunctionExp ValueT where
   ytrans (Py.ExprIsFunctionExp t :&: _) = ytranslate t
 
-instance YTrans Py.ExprIsFunctionExp Py.MPythonSig YPythonSig AddressT where
+instance YTrans Py.ExprIsFunctionExp AddressT where
   ytrans (Py.ExprIsFunctionExp t :&: _) = ytranslate t
 
-instance YTrans Py.FunctionCallIsExpr Py.MPythonSig YPythonSig ValueT where
+instance YTrans Py.FunctionCallIsExpr ValueT where
   ytrans (Py.FunctionCallIsExpr t :&: l) = ytranslate t >>= (insertNode [l]) . ValF
 
-instance YTrans Py.PyCompIsExpr Py.MPythonSig YPythonSig ValueT where
+instance YTrans Py.PyCompIsExpr ValueT where
   ytrans (Py.PyCompIsExpr t :&: _) = ytranslate t
 
-instance YTrans Py.AssignIsStatement Py.MPythonSig YPythonSig StatementT where
+instance YTrans Py.AssignIsStatement StatementT where
   ytrans (Py.AssignIsStatement t :&: _) = ytranslate t >>= \(_ :: PyID MemValT) -> return Statement
 
-instance YTrans Py.FunctionDefIsStatement Py.MPythonSig YPythonSig StatementT where
+instance YTrans Py.FunctionDefIsStatement StatementT where
   ytrans (Py.FunctionDefIsStatement t :&: _) = ytranslate t
 
-instance YTrans Py.PyClassIsStatement Py.MPythonSig YPythonSig StatementT where
+instance YTrans Py.PyClassIsStatement StatementT where
   ytrans (Py.PyClassIsStatement t :&: _) = ytranslate t
 
-instance YTrans Py.StatementIsBlockItem Py.MPythonSig YPythonSig StatementT where
+instance YTrans Py.StatementIsBlockItem StatementT where
   ytrans (Py.StatementIsBlockItem t :&: _) = ytranslate t
 
-instance YTrans Py.PyBlockIsFunctionBody Py.MPythonSig YPythonSig [StatementT] where
+instance YTrans Py.PyBlockIsFunctionBody [StatementT] where
   ytrans (Py.PyBlockIsFunctionBody t :&: _) = ytranslate t
 
-ytransPythonModule :: (MonadYogoPy m)
-                   => TranslateM m Py.MPythonTermLab Py.ModuleL (ID YPythonSig StatementT)
+ytransPythonModule :: (MonadYogoPy m) => TranslateM m Py.MPythonTermLab Py.ModuleL (PyID StatementT)
 ytransPythonModule t = ytranslate t
 
 initState :: YogoState YPythonSig

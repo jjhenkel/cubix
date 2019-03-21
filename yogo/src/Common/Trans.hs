@@ -192,9 +192,9 @@ makeLenses ''YogoState
 
 type MonadYogo f m = (MonadPlus m, MonadState (YogoState f) m)
 
-type CanYTrans f = (HFunctor f, ShowHF f, Typeable f)
-
-type YTranslateM m f sig ysig t = GTranslateM m ((f :&: Label) (TermLab sig)) (ID ysig t)
+type YTransSortM m f g l y t = TranslateM m ((f :&: Label) (TermLab g)) l (ID y t)
+type YTransM     m f g y t   = GTranslateM m ((f :&: Label) (TermLab g)) (ID y t)
+type YTransTermM m f y t     = GTranslateM m (TermLab f) (ID y t)
 
 instance Show (YGraphEntry f) where
   show (YGraphNode (E id) _ _) = show id
@@ -262,6 +262,12 @@ iIterV labels iterable = use loopDepth >>= \depth -> insertNode labels (IterVF d
 iIterP :: (MonadYogo f m, IterPF :<: f) => [Label] -> ID f ValueT -> m (ID f ValueT)
 iIterP labels iterable = use loopDepth >>= \depth -> insertNode labels (IterPF depth iterable)
 
+iUnknownF :: (MonadYogo f m, UnknownF :<: f, MemF :<: f) => [Label] -> m (ID f MemValT)
+iUnknownF labels = getMem >>= (insertNode labels) . UnknownF >>= updateMemVal
+
+iAssignF :: (MonadYogo f m, AssignF :<: f, MemF :<: f) => [Label] -> ID f ValueT -> ID f AddressT -> m (ID f MemValT)
+iAssignF labels rv lv = getMem >>= (insertNode labels) . (AssignF rv lv) >>= updateMemVal
+
 getMem :: (MonadYogo f m) => m (ID f MemoryT)
 getMem = liftM head $ use memScope
 
@@ -277,145 +283,105 @@ updateMem mem = popMem >> pushMem mem
 updateMemVal :: (MonadYogo f m, MemF :<: f) => ID f MemValT -> m (ID f MemValT)
 updateMemVal memVal = iMemF [] memVal >> return memVal
 
-ytransUnknown :: (MonadYogo y m,
-                  UnknownF :<: y, MemF :<: y) => YTranslateM m f g y MemValT
-ytransUnknown (_ :&: l) = getMem >>= (insertNode [l]) . UnknownF >>= updateMemVal
-
--- s is needed, otherwise cause Incoherent Instances when f is a signature type
-class (CanYTrans f) => YTrans f g y t where
-  ytrans :: (MonadYogo y m) => YTranslateM m f g y t
-
-ytranslate :: (CanYTrans f, MonadYogo y m, YTrans f f y t)
-           => GTranslateM m (TermLab f) (ID y t)
-ytranslate f = (ytrans . unTerm) f
-
-instance {-# OVERLAPPABLE #-} (CanYTrans f) => YTrans f g y t where
-  ytrans t = do
-    traceM $ show $ typeRep (Proxy :: Proxy f)
-    mzero
-  -- ytrans = error $ show (typeRep (Proxy :: Proxy f))
-
-instance {-# OVERLAPPING #-} (YTrans f1 g y t, YTrans f2 g y t) => YTrans (f1 :+: f2) g y t where
-  ytrans = caseH' ytrans ytrans
-
 getLabel :: TermLab f t -> Label
 getLabel (Term (_ :&: l)) = l
 
-unrollPairF :: (Cx.PairF :<: g) => TermLab g (i, j) -> (Label, (TermLab g i, TermLab g j))
-unrollPairF t@(project' -> Just (Cx.PairF i j)) = (getLabel t, (i, j))
-unrollPairF _ = error "Cannot unroll PairF"
-
-unrollListF :: (Cx.ListF :<: g) => TermLab g [t] -> [(Label, TermLab g t)]
-unrollListF t@(project' -> Just (Cx.NilF)) = []
-unrollListF t@(project' -> Just (Cx.ConsF x xs)) = (getLabel t, x) : unrollListF xs
-
 -- Not every kinds of ListF needs to become a list in Yogo graph, therefore just
 -- return ID f [t] for the caller to decide what to do with it.
-instance (Cx.ListF :<: g, YTrans g g y t) => YTrans Cx.ListF g y [t] where
-  ytrans (Cx.NilF :&: _) = return $ IDs []
-  ytrans t@(Cx.ConsF _ _ :&: _) =
-    -- Unroll the ListF into a normal list and translate each element
-    let elems = unrollListF $ inject' t in
-      traverse (traverse ytranslate) elems >>= return . IDs
-
-instance (Cx.Ident :<: g, IdentF :<: y) => YTrans Cx.Ident g y AddressT where
-  ytrans (Cx.Ident name :&: l) = insertNode [l] (IdentF name)
+ytransList :: (MonadYogo y m, Cx.ListF :<: f)
+           => YTransTermM m f y t
+           -> YTransTermM m f y [t]
+           -> YTransM m Cx.ListF f y [t]
+ytransList _ _ (Cx.NilF :&: _) = return $ IDs []
+ytransList ytElem ytList (Cx.ConsF x xs :&: l) = do
+  id <- ytElem x
+  (IDs ids) <- ytList xs
+  return $ IDs $ (l, id) : ids
 
 type AssignFragment f y = (Cx.Assign :<: f, Cx.AssignOpEquals :<: f, AssignF :<: y, MemF :<: y)
 
--- ytransAssign :: (MonadYogo y m, AssignFragment g y, YTrans g g y AddressT, YTrans g g y ValueT)
---              => [Label] -> TermLab g l1 -> TermLab g l2
---              -> m (ID y MemValT)
--- ytransAssign labels rvalue lvalue = do
---   AssignF <$> ytranslate rvalue <*> ytranslate lvalue <*> getMem >>= insertNode labels >>= updateMemVal
+ytransAssign :: (MonadYogo y m, AssignFragment f y)
+             => YTransTermM m f y AddressT
+             -> YTransTermM m f y ValueT
+             -> YTransM m Cx.Assign f y MemValT
+ytransAssign ytAddr ytVal (Cx.Assign lv (project' -> Just (Cx.AssignOpEquals)) rv :&: l) = do
+  rvalue <- ytVal rv
+  lvalue <- ytAddr lv
+  iAssignF [l] rvalue lvalue
 
--- instance (AssignFragment g y, YTrans g g y AddressT, YTrans g g y ValueT) => YTrans Cx.Assign g y MemValT where
---   -- Assumes to be :=. Not true outside of Python
---   ytrans (Cx.Assign lv (project' -> Just (Cx.AssignOpEquals)) rv :&: l) =
---     AssignF <$> ytranslate rv <*> ytranslate lv <*> getMem >>= insertNode [l] >>= updateMemVal
+type FunctionCallFragment f y = (Cx.FunctionCall :<: f, Cx.ListF :<: f, Cx.ReceiverArg :<: f,
+                                 Cx.FunctionArgumentList :<: f, Cx.PositionalArgument :<: f,
+                                 NothingF :<: y, FunctionCallF :<: y, FunctionArgsF :<: y,
+                                 MemF :<: y, DotF :<: y, Q :<: y)
 
--- type FunctionCallFragment f y = (Cx.FunctionCall :<: f, Cx.ListF :<: f, Cx.ReceiverArg :<: f,
---                                  Cx.FunctionArgumentList :<: f, Cx.PositionalArgument :<: f,
---                                  NothingF :<: y, FunctionCallF :<: y, FunctionArgsF :<: y,
---                                  MemF :<: y, DotF :<: y, Q :<: y)
+ytransFCall :: (MonadYogo y m, FunctionCallFragment f y)
+            => YTransTermM m f y AddressT
+            -> YTransTermM m f y ValueT
+            -> YTransTermM m f y [ValueT]
+            -> YTransM m Cx.FunctionCall f y MemValT
+ytransFCall ytAddr ytVal ytList (Cx.FunctionCall _ fexpr fargs :&: l) = do
+  -- Check if there is a receiver
+  recvArgs <- case project' fargs of
+                Just (Cx.FunctionArgumentList list) ->
+                  case project' list of
+                    Just (Cx.ConsF arg args) ->
+                      case project' arg of
+                        Just (Cx.ReceiverArg recv) -> ytVal recv >>= \recv -> return $ Just (recv, getLabel arg, args)
+                        _ -> return Nothing
+                    _ -> return Nothing
+  fn <- case recvArgs of
+          Nothing -> ytVal fexpr
+          Just (recv, l, _) -> ytAddr fexpr >>= insertNode [getLabel fexpr] . (DotF recv) >>= iQ [getLabel fexpr, l]
+  let argsTerm = case recvArgs of
+                  Nothing -> case project' fargs of
+                               Just (Cx.FunctionArgumentList list) -> list
+                  Just (_, _, args) -> args
+  args <- ytList argsTerm >>= case recvArgs of
+                                Nothing -> parseArgs . fromIds
+                                Just (recv, l, _) -> parseArgs . ((l, recv) :) . fromIds
+  getMem >>= (insertNode [l]) . (FunctionCallF fn args) >>= updateMemVal
+  where
+    parseArgs [] = insertNode [] NothingF
+    parseArgs ((l, id) : xs) = parseArgs xs >>= (insertNode [l]) . (FunctionArgsF id)
 
--- instance (FunctionCallFragment g y, YTrans g g y AddressT, YTrans g g y ValueT, YTrans g g y [ValueT]) => YTrans Cx.FunctionCall g y MemValT where
---   ytrans (Cx.FunctionCall _ fexpr fargs :&: l) = do
---     -- Check if there is a receiver
---     recvArgs <- case project' fargs of
---                   Just (Cx.FunctionArgumentList list) ->
---                     case project' list of
---                       Just (Cx.ConsF arg args) ->
---                         case project' arg of
---                           Just (Cx.ReceiverArg recv) -> ytranslate recv >>= \recv -> return $ Just (recv, getLabel arg, args)
---                           _ -> return Nothing
---                       _ -> return Nothing
-
---     fn <- case recvArgs of
---             Nothing -> ytranslate fexpr
---             Just (recv, l, _) -> ytranslate fexpr >>= insertNode [getLabel fexpr] . (DotF recv) >>= iQ [getLabel fexpr, l]
-
---     let argsTerm = case recvArgs of
---                      Nothing -> case project' fargs of
---                                   Just (Cx.FunctionArgumentList list) -> list
---                      Just (_, _, args) -> args
-
---     args <- ytranslate argsTerm >>= case recvArgs of
---                                       Nothing -> parseArgs . fromIds
---                                       Just (recv, l, _) -> parseArgs . ((l, recv) :) . fromIds
-
---     getMem >>= (insertNode [l]) . (FunctionCallF fn args) >>= updateMemVal
---     where
---       parseArgs [] = insertNode [] NothingF
---       parseArgs ((l, id) : xs) = parseArgs xs >>= (insertNode [l]) . (FunctionArgsF id)
-
--- instance (FunctionCallFragment g y, YTrans g g y ValueT) => YTrans Cx.PositionalArgument g y ValueT where
---   ytrans (Cx.PositionalArgument t :&: _) = ytranslate t
-
--- -- Could be address or value, depending on whether the function has a receiver argument
--- instance (FunctionCallFragment g y, YTrans g g y ValueT) => YTrans Cx.FunctionIdent g y ValueT where
---   ytrans (Cx.FunctionIdent t :&: _) = ytranslate t
-
--- instance (FunctionCallFragment g y, YTrans g g y AddressT) => YTrans Cx.FunctionIdent g y AddressT where
---   ytrans (Cx.FunctionIdent t :&: _) = ytranslate t
-
-instance (Cx.SingleLocalVarDecl :<: g, Cx.OptLocalVarInit :<: g, AssignFragment g y,
-          YTrans g g y AddressT, YTrans g g y ValueT) => YTrans Cx.SingleLocalVarDecl g y StatementT where
-  ytrans _ = undefined
-  -- ytrans (Cx.SingleLocalVarDecl _ binder (project' -> Just Cx.NoLocalVarInit) :&: _) = do
-  --   _ :: ID y AddressT <- ytranslate binder
-  --   return Statement
-  -- ytrans (Cx.SingleLocalVarDecl _ binder (project' -> Just (Cx.JustLocalVarInit init)) :&: l) = do
-  --   ytransAssign [l] binder init
-  --   return Statement
-
-instance (Cx.IdentIsVarDeclBinder :<: g, YTrans g g y AddressT) => YTrans Cx.IdentIsVarDeclBinder g y AddressT where
-  ytrans (Cx.IdentIsVarDeclBinder t :&: _) = ytranslate t
 
 type ScopeFragment f y = (Cx.Ident :<: f,
                           MemGenesisF :<: y, UnknownF :<: y,
                           MemF :<: y, ValF :<: y, AssignF :<: y)
 
-ytransScope :: (ScopeFragment g y, MonadYogo y m, YTrans g g y [StatementT], YTrans g g y AddressT)
-            => [Label] -> TermLab g lname -> TermLab g lbody -> m (ID y StatementT)
-ytransScope labels name body = do
+ytranslateScope :: (ScopeFragment f y, MonadYogo y m)
+                => YTransTermM m f y [StatementT]
+                -> YTransTermM m f y AddressT
+                -> [Label]
+                -> TermLab f lname
+                -> TermLab f lbody
+                -> m (ID y StatementT)
+ytranslateScope ytStmts ytAddr labels name body = do
   let name' = case project' name of
                 Just (Cx.Ident s) -> s
                 _ -> error "ytransScope: unexpected name"
   scopeName <- liftM (Name . (name' ++) . show) getCounter
   newScope scopeName
-  _ :: ID y [StatementT] <- ytranslate body
+  _ :: ID y [StatementT] <- ytStmts body
   endScope
   before <- getMem
-  rvalue <- ytransUnknown (unTerm body) >>= insertNode labels . ValF
+  rvalue <- iUnknownF [getLabel body] >>= insertNode labels . ValF
   after <- getMem
   addEntry $ YGraphEq (E before) (E after)
-  AssignF rvalue <$> ytranslate name <*> getMem >>= insertNode labels
+  AssignF rvalue <$> ytAddr name <*> getMem >>= insertNode labels
   return Statement
 
-instance (ScopeFragment g y, Cx.FunctionDef :<: g, YTrans g g y [StatementT], YTrans g g y AddressT
-         ) => YTrans Cx.FunctionDef g y StatementT where
-  ytrans (Cx.FunctionDef _ fname _ fbody :&: l) = ytransScope [l] fname fbody
+type VarDeclFragment f y = (Cx.SingleLocalVarDecl :<: f, Cx.OptLocalVarInit :<: f, AssignF :<: y, MemF :<: y)
 
-instance (Cx.Block :<: g, YTrans g g y [StatementT]) => YTrans Cx.Block g y [StatementT] where
-  ytrans (Cx.Block t _ :&: l) = ytranslate t
+ytransSingleLocalVarDecl :: (MonadYogo y m, VarDeclFragment f y)
+                         => YTransTermM m f y AddressT
+                         -> YTransTermM m f y ValueT
+                         -> YTransM m Cx.SingleLocalVarDecl f y StatementT
+ytransSingleLocalVarDecl ytAddr _ (Cx.SingleLocalVarDecl _ binder (project' -> Just Cx.NoLocalVarInit) :&: _) = do
+    ytAddr binder
+    return Statement
+ytransSingleLocalVarDecl ytAddr ytVal (Cx.SingleLocalVarDecl _ binder (project' -> Just (Cx.JustLocalVarInit init)) :&: l) = do
+    var <- ytAddr binder
+    val <- ytVal init
+    iAssignF [l] val var
+    return Statement

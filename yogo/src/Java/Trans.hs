@@ -43,101 +43,162 @@ data JBlank (e :: * -> *) l where
 type YJavaSig = JBlank :+: YGenericSig
 type JID t = ID YJavaSig t
 
+type CanYTrans f = (HFunctor f, ShowHF f, Typeable f)
 type MonadYogoJ m = (MonadYogo YJavaSig m)
-type CanYTransJ f = (CanYTrans f)
 
--- instance YTrans J.ClassDecl J.MJavaSig YJavaSig StatementT where
---   ytrans (J.ClassDecl _ ident _ _ _ body :&: l) = do
---     let ident' = case project' ident of
---                  Just (J.IdentIsIdent ident') -> ident'
---     ytransScope [l] ident' body
+class (CanYTrans f) => YTrans f t where
+  ytrans :: (MonadYogoJ m) => YTransM m f J.MJavaSig YJavaSig t
 
--- instance YTrans J.ClassBody J.MJavaSig YJavaSig [StatementT] where
---   ytrans (J.ClassBody t :&: _) = ytranslate t
+ytranslate :: (MonadYogoJ m, YTrans J.MJavaSig t) => YTransTermM m J.MJavaSig YJavaSig t
+ytranslate f = (ytrans . unTerm) f
 
--- instance YTrans J.Decl J.MJavaSig YJavaSig StatementT where
---   ytrans (J.MemberDecl t :&: _) = ytranslate t
---   ytrans _ = error "J.Decl not implemented"
+-- ----------
+-- Generic
+-- ----------
 
--- instance YTrans J.FunctionDefIsMemberDecl J.MJavaSig YJavaSig StatementT where
---   ytrans (J.FunctionDefIsMemberDecl t :&: _) = ytranslate t
+instance {-# OVERLAPPABLE #-} (CanYTrans f) => YTrans f t where
+  ytrans t = do
+    traceM $ show $ typeRep (Proxy :: Proxy f)
+    mzero
+  -- ytrans = error $ show (typeRep (Proxy :: Proxy f))
 
--- instance YTrans J.BlockIsFunctionBody J.MJavaSig YJavaSig [StatementT] where
---   ytrans (J.BlockIsFunctionBody t :&: _) = ytranslate t
+instance {-# OVERLAPPING #-} (YTrans f1 t, YTrans f2 t) => YTrans (f1 :+: f2) t where
+  ytrans = caseH' ytrans ytrans
 
--- instance YTrans J.BlockStmt J.MJavaSig YJavaSig StatementT where
---   ytrans (J.BlockStmt t :&: _) = ytranslate t
---   ytrans _ = error "J.BlockStmt variant not implemented"
+instance (YTrans J.MJavaSig t) => YTrans Cx.ListF [t] where
+  ytrans = ytransList ytranslate ytranslate
 
--- instance YTrans J.BlockStmtIsBlockItem J.MJavaSig YJavaSig StatementT where
---   ytrans (J.BlockStmtIsBlockItem t :&: _) = ytranslate t
+instance YTrans Cx.Ident AddressT where
+  ytrans (Cx.Ident name :&: l) = insertNode [l] (IdentF name)
 
--- instance YTrans J.Stmt J.MJavaSig YJavaSig StatementT where
---   ytrans (J.ExpStmt t :&: _) = do
---     _ :: JID ValueT <- ytranslate t
---     return Statement
---   ytrans _ = error "J.Stmt variant not implemented"
+instance YTrans Cx.Assign MemValT where
+  ytrans = ytransAssign ytranslate ytranslate
 
--- ytransLit :: (MonadYogoJ m) => [Label] -> J.MJavaTermLab J.LiteralL -> m (JID ValueT)
--- ytransLit labels (project' -> Just (J.Int n)) = insertNode labels $ ConstF $ IntegerF n
+instance YTrans Cx.FunctionCall MemValT where
+  ytrans = ytransFCall ytranslate ytranslate ytranslate
 
--- instance YTrans J.Exp J.MJavaSig YJavaSig ValueT where
---   ytrans (J.Lit lit :&: l) = ytransLit [l] lit
---   ytrans (J.ExpName name :&: l) = Q <$> ytranslate name <*> getMem >>= insertNode [l]
+instance YTrans Cx.PositionalArgument ValueT where
+  ytrans (Cx.PositionalArgument t :&: _) = ytranslate t
 
--- instance YTrans J.ExpIsRhs J.MJavaSig YJavaSig ValueT where
---   ytrans (J.ExpIsRhs t :&: _) = ytranslate t
+-- Could be address or value, depending on whether the function has a receiver argument
+instance YTrans Cx.FunctionIdent ValueT where
+  ytrans (Cx.FunctionIdent t :&: _) = ytranslate t
 
--- instance YTrans J.AssignIsExp J.MJavaSig YJavaSig ValueT where
---   ytrans (J.AssignIsExp t :&: l) = ytranslate t >>= (insertNode [l]) . ValF
+instance YTrans Cx.FunctionIdent AddressT where
+  ytrans (Cx.FunctionIdent t :&: _) = ytranslate t
 
--- instance YTrans J.LhsIsLhs J.MJavaSig YJavaSig AddressT where
---   ytrans (J.LhsIsLhs t :&: _) = ytranslate t
+instance YTrans Cx.FunctionDef StatementT where
+  ytrans (Cx.FunctionDef _ fname _ fbody :&: l) = ytranslateScope ytranslate ytranslate [l] fname fbody
 
--- instance YTrans J.Name J.MJavaSig YJavaSig AddressT where
---   ytrans (J.Name idents :&: l) = case project' idents of
---                                    Just (Cx.ConsF ident _) -> ytranslate ident
+instance YTrans Cx.Block [StatementT] where
+  ytrans (Cx.Block t _ :&: l) = ytranslate t
 
--- instance YTrans J.Lhs J.MJavaSig YJavaSig AddressT where
---   ytrans (J.NameLhs name :&: _) = ytranslate name
-
--- instance YTrans J.IdentIsIdent J.MJavaSig YJavaSig AddressT where
---   ytrans (J.IdentIsIdent t :&: _) = ytranslate t
-
--- instance YTrans J.TypeDecl J.MJavaSig YJavaSig StatementT where
---   ytrans (J.ClassTypeDecl t :&: l) = ytranslate t
---   ytrans _ = error "J.TypeDecl variant not implemented"
-
--- instance YTrans J.VarInit J.MJavaSig YJavaSig ValueT where
---   ytrans (J.InitExp t :&: _) = ytranslate t
-
--- instance YTrans J.VarInitIsLocalVarInit J.MJavaSig YJavaSig ValueT where
---   ytrans (J.VarInitIsLocalVarInit t :&: _) = ytranslate t
-
--- instance YTrans J.CompilationUnit J.MJavaSig YJavaSig StatementT where
---   ytrans (J.CompilationUnit _ _ decl :&: _) = do
---     newScope $ Name "CompilationUnit"
---     _ :: JID [StatementT] <- ytranslate decl
---     return Statement
-
--- instance YTrans J.MultiLocalVarDecl J.MJavaSig YJavaSig StatementT where
---   ytrans (J.MultiLocalVarDecl _ decls :&: _) = do
---     _ :: JID [StatementT] <- ytranslate decls
---     return Statement
+-- ----------
+-- Java specific
+-- ----------
 
 
--- ytransCompilationUnit :: (MonadYogoJ m)
---                       => TranslateM m J.MJavaTermLab J.CompilationUnitL (JID StatementT)
--- ytransCompilationUnit = ytranslate
+instance YTrans J.ClassDecl StatementT where
+  ytrans (J.ClassDecl _ ident _ _ _ body :&: l) = do
+    let ident' = case project' ident of
+                 Just (J.IdentIsIdent ident') -> ident'
+    ytranslateScope ytranslate ytranslate [l] ident' body
 
--- initState :: YogoState YJavaSig
--- initState = YogoState [] [] Map.empty 0 0
+instance YTrans J.ClassBody [StatementT] where
+  ytrans (J.ClassBody t :&: _) = ytranslate t
 
--- fileToGraph :: J.MJavaTermLab l -> YFile YJavaSig
--- fileToGraph t =
---   let (a, state) = fromJust $ runIdentity $ runMaybeT $ runStateT ((onetdT $ promoteTF ytransCompilationUnit) t) initState in
---     state ^. file
+instance YTrans J.Decl StatementT where
+  ytrans (J.MemberDecl t :&: _) = ytranslate t
+  ytrans _ = error "J.Decl not implemented"
+
+instance YTrans J.FunctionDefIsMemberDecl StatementT where
+  ytrans (J.FunctionDefIsMemberDecl t :&: _) = ytranslate t
+
+instance YTrans J.BlockIsFunctionBody [StatementT] where
+  ytrans (J.BlockIsFunctionBody t :&: _) = ytranslate t
+
+instance YTrans J.BlockStmt StatementT where
+  ytrans (J.BlockStmt t :&: _) = ytranslate t
+  ytrans _ = error "J.BlockStmt variant not implemented"
+
+instance YTrans J.BlockStmtIsBlockItem StatementT where
+  ytrans (J.BlockStmtIsBlockItem t :&: _) = traceM "ye" >> ytranslate t
+
+instance YTrans J.Stmt StatementT where
+  ytrans (J.ExpStmt t :&: _) = do
+    _ :: JID ValueT <- ytranslate t
+    return Statement
+  ytrans _ = error "J.Stmt variant not implemented"
+
+ytranslateLit :: (MonadYogoJ m) => [Label] -> J.MJavaTermLab J.LiteralL -> m (JID ValueT)
+ytranslateLit labels (project' -> Just (J.Int n)) = insertNode labels $ ConstF $ IntegerF n
+
+instance YTrans J.Exp ValueT where
+  ytrans (J.Lit lit :&: l) = ytranslateLit [l] lit
+  ytrans (J.ExpName name :&: l) = Q <$> ytranslate name <*> getMem >>= insertNode [l]
+
+instance YTrans J.ExpIsRhs ValueT where
+  ytrans (J.ExpIsRhs t :&: _) = ytranslate t
+
+instance YTrans J.AssignIsExp ValueT where
+  ytrans (J.AssignIsExp t :&: l) = ytranslate t >>= (insertNode [l]) . ValF
+
+instance YTrans J.LhsIsLhs AddressT where
+  ytrans (J.LhsIsLhs t :&: _) = ytranslate t
+
+instance YTrans J.Name AddressT where
+  ytrans (J.Name idents :&: l) = case project' idents of
+                                   Just (Cx.ConsF ident _) -> ytranslate ident
+
+instance YTrans J.Lhs AddressT where
+  ytrans (J.NameLhs name :&: _) = ytranslate name
+
+instance YTrans J.IdentIsIdent AddressT where
+  ytrans (J.IdentIsIdent t :&: _) = ytranslate t
+
+instance YTrans J.TypeDecl StatementT where
+  ytrans (J.ClassTypeDecl t :&: l) = ytranslate t
+  ytrans _ = error "J.TypeDecl variant not implemented"
+
+instance YTrans J.MultiLocalVarDecl StatementT where
+  ytrans (J.MultiLocalVarDecl _ decls :&: _) = do
+    traceM "yo"
+    _ :: JID [StatementT] <- ytranslate decls
+    return Statement
+
+instance YTrans Cx.SingleLocalVarDecl StatementT where
+  ytrans = ytransSingleLocalVarDecl ytranslate ytranslate
+
+instance YTrans Cx.IdentIsVarDeclBinder AddressT where
+  ytrans (Cx.IdentIsVarDeclBinder t :&: _) = ytranslate t
+
+instance YTrans J.VarInit ValueT where
+  ytrans (J.InitExp t :&: _) = ytranslate t
+
+instance YTrans J.VarInitIsLocalVarInit ValueT where
+  ytrans (J.VarInitIsLocalVarInit t :&: _) = ytranslate t
+
+instance YTrans J.MultiLocalVarDeclIsBlockStmt StatementT where
+  ytrans (J.MultiLocalVarDeclIsBlockStmt t :&: _) = ytranslate t
+
+instance YTrans J.CompilationUnit StatementT where
+  ytrans (J.CompilationUnit _ _ decl :&: _) = do
+    newScope $ Name "CompilationUnit"
+    _ :: JID [StatementT] <- ytranslate decl
+    return Statement
+
+ytransCompilationUnit :: (MonadYogoJ m)
+                      => TranslateM m J.MJavaTermLab J.CompilationUnitL (JID StatementT)
+ytransCompilationUnit = ytranslate
+
+initState :: YogoState YJavaSig
+initState = YogoState [] [] Map.empty 0 0
+
+fileToGraph :: J.MJavaTermLab l -> YFile YJavaSig
+fileToGraph t =
+  let (a, state) = fromJust $ runIdentity $ runMaybeT $ runStateT ((onetdT $ promoteTF ytransCompilationUnit) t) initState in
+    state ^. file
 
 toGraphJava :: Project J.MJavaSig -> YProject YJavaSig
--- toGraphJava = Map.map (\(E t) -> fileToGraph t)
-toGraphJava = undefined
+toGraphJava = Map.map (\(E t) -> fileToGraph t)
+-- toGraphJava = undefined
