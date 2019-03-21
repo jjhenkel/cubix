@@ -148,6 +148,8 @@ instance YTrans Py.Op OpT where
   ytrans (Py.Plus _ :&: l) = insertNode [l] (CommonOp Plus)
   ytrans (Py.Minus _ :&: l) = insertNode [l] (CommonOp Minus)
   ytrans (Py.Multiply _ :&: l) = insertNode [l] (CommonOp Multiply)
+  ytrans (Py.Divide _ :&: l) = insertNode [l] (CommonOp Divide)
+  ytrans (Py.Modulo _ :&: l) = insertNode [l] (CommonOp Modulo)
   ytrans (Py.LessThan _ :&: l) = insertNode [l] (CommonOp LessThan)
   ytrans (Py.LessThanEquals _ :&: l) = insertNode [l] (CommonOp LessThanEquals)
   ytrans (Py.GreaterThan _ :&: l) = insertNode [l] (CommonOp GreaterThan)

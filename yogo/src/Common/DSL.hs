@@ -245,6 +245,7 @@ primitiveToDSL (IntegerF n) = show n
 primitiveToDSL (IntF n) = show n
 primitiveToDSL (BoolF b) = if b then "true" else "false"
 primitiveToDSL (StringF s) = quoteStr s
+primitiveToDSL (NullF) = "nil"
 
 idToDSL :: ID f t -> String
 idToDSL (ID n) = "n-" ++ show n
@@ -261,6 +262,8 @@ commonOpToDSL Exponent = ":**"
 commonOpToDSL Plus = ":+"
 commonOpToDSL Minus = ":-"
 commonOpToDSL Multiply = ":*"
+commonOpToDSL Divide = ":div"
+commonOpToDSL Modulo = ":mod"
 commonOpToDSL LessThan = ":<"
 commonOpToDSL GreaterThan = ":>"
 commonOpToDSL Equals = ":=="

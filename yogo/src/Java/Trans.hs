@@ -130,11 +130,34 @@ instance YTrans J.Stmt StatementT where
     return Statement
   ytrans _ = error "J.Stmt variant not implemented"
 
+instance YTrans J.Op OpT where
+  ytrans (J.Mult :&: l) = insertNode [l] (CommonOp Multiply)
+  ytrans (J.Div :&: l) = insertNode [l] (CommonOp Divide)
+  ytrans (J.Rem :&: l) = insertNode [l] (CommonOp Modulo)
+  ytrans (J.Add :&: l) = insertNode [l] (CommonOp Plus)
+  ytrans (J.Sub :&: l) = insertNode [l] (CommonOp Minus)
+  ytrans (J.LShift :&: l) = insertNode [l] (CommonOp Unknown)
+  ytrans (J.RShift :&: l) = insertNode [l] (CommonOp Unknown)
+  ytrans (J.RRShift :&: l) = insertNode [l] (CommonOp Unknown)
+  ytrans (J.LThan :&: l) = insertNode [l] (CommonOp LessThan)
+  ytrans (J.GThan :&: l) = insertNode [l] (CommonOp GreaterThan)
+  ytrans (J.LThanE :&: l) = insertNode [l] (CommonOp LessThanEquals)
+  ytrans (J.GThanE :&: l) = insertNode [l] (CommonOp GreaterThanEquals)
+  ytrans (J.Equal :&: l) = insertNode [l] (CommonOp Equals)
+  ytrans (J.NotEq :&: l) = insertNode [l] (CommonOp NotEquals)
+  ytrans (J.And :&: l) = insertNode [l] (CommonOp And)
+  ytrans (J.Or :&: l) = insertNode [l] (CommonOp Or)
+  ytrans (J.Xor :&: l) = insertNode [l] (CommonOp Unknown)
+  ytrans (J.CAnd :&: l) = insertNode [l] (CommonOp Unknown)
+  ytrans (J.COr :&: l) = insertNode [l] (CommonOp Unknown)
+
 ytranslateLit :: (MonadYogoJ m) => [Label] -> J.MJavaTermLab J.LiteralL -> m (JID ValueT)
 ytranslateLit labels (project' -> Just (J.Int n)) = insertNode labels $ ConstF $ IntegerF n
 
 instance YTrans J.Exp ValueT where
   ytrans (J.Lit lit :&: l) = ytranslateLit [l] lit
+  ytrans (J.BinOp arg1 op arg2 :&: l) =
+    BinopF <$> ytranslate op <*> ytranslate arg1 <*> ytranslate arg2 >>= insertNode [l]
   ytrans (J.ExpName name :&: l) = Q <$> ytranslate name <*> getMem >>= insertNode [l]
 
 instance YTrans J.ExpIsRhs ValueT where
