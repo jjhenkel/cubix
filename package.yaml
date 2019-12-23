@@ -81,29 +81,29 @@ library:
   - th-expand-syns
   - wl-pprint
 executables:
-  examples-multi:
-    main: Main.hs
-    source-dirs: examples/multi
-    ghc-options:
-     - -threaded
-     - -rtsopts
-     - -with-rtsopts=-N
-     - -fcontext-stack=200
-    dependencies:
-    - base
-    - cubix-compdata
-    - constraints
-    - fgl
-    - language-dot
-    - language-c
-    - language-java >= 0.2.8.1
-    - language-javascript >= 0.6.0.9
-    - language-lua
-    - language-python
-    - cubix
-    - lens
-    - temporary
-    - text
+  # examples-multi:
+  #   main: Main.hs
+  #   source-dirs: examples/multi
+  #   ghc-options:
+  #    - -threaded
+  #    - -rtsopts
+  #    - -with-rtsopts=-N
+  #    - -fcontext-stack=200
+  #   dependencies:
+  #   - base
+  #   - cubix-compdata
+  #   - constraints
+  #   - fgl
+  #   - language-dot
+  #   - language-c
+  #   - language-java >= 0.2.8.1
+  #   - language-javascript >= 0.6.0.9
+  #   - language-lua
+  #   - language-python
+  #   - cubix
+  #   - lens
+  #   - temporary
+  #   - text
   # Stack doesn't seem to let you disable building these,
   # and I'm having trouble guarding these with a flag.
   # So, commenting out.
@@ -131,19 +131,21 @@ executables:
   #  - cubix-compdata
   #  - language-c
   #  - cubix
-  #examples-java:
-  #  main: Main.hs
-  #  source-dirs: examples/java
-  #  ghc-options:
-  #  - -threaded
-  #  - -rtsopts
-  #  - -with-rtsopts=-N
-  #  - -fcontext-stack=200
-  #  dependencies:
-  #  - base
-  #  - cubix-compdata
-  #  - cubix
-  #  - language-java
+  examples-java:
+   main: Main.hs
+   source-dirs: examples/java
+   ghc-options:
+   - -threaded
+   - -rtsopts
+   - -with-rtsopts=-N
+   - -fcontext-stack=200
+   dependencies:
+   - utf8-string
+   - aeson
+   - base
+   - cubix-compdata
+   - cubix
+   - language-java
   #examples-javascript:
   #  main: Main.hs
   #  source-dirs: examples/javascript
